@@ -1,0 +1,24 @@
+services:
+  thai-translate:
+    build:
+      context: .
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3000
+      CLIPROXYAPI_BASE_URL: http://cliproxyapi:8317/v1
+      CLIPROXYAPI_API_KEY: "${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-5.6-terra}"
+      OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-none}"
+      CORS_ORIGINS: http://localhost:8081,http://localhost:3000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - default
+      - agent-internal
+
+networks:
+  agent-internal:
+    external: true
+    name: "${AGENT_DOCKER_NETWORK:-agent-docker_agent-internal}"

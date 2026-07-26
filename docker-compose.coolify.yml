@@ -1,0 +1,37 @@
+services:
+  thai-translate:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      CLIPROXYAPI_BASE_URL: http://cliproxyapi:8317/v1
+      CLIPROXYAPI_API_KEY: "${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-5.6-terra}"
+      OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-none}"
+      APP_ACCESS_PIN: "${APP_ACCESS_PIN:?Set APP_ACCESS_PIN}"
+      SESSION_SECRET: "${SESSION_SECRET:?Set SESSION_SECRET}"
+      CORS_ORIGINS: https://translate.hetz.autismstaking.xyz
+    expose:
+      - "3000"
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.middlewares.thai-translate-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.thai-translate-http.entrypoints=http
+      - traefik.http.routers.thai-translate-http.rule=Host(`translate.hetz.autismstaking.xyz`)
+      - traefik.http.routers.thai-translate-http.middlewares=thai-translate-redirect
+      - traefik.http.routers.thai-translate-https.entrypoints=https
+      - traefik.http.routers.thai-translate-https.rule=Host(`translate.hetz.autismstaking.xyz`)
+      - traefik.http.routers.thai-translate-https.tls=true
+      - traefik.http.routers.thai-translate-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.thai-translate-https.service=thai-translate
+      - traefik.http.services.thai-translate.loadbalancer.server.port=3000
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

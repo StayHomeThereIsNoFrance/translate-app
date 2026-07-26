@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Thai AI Translate",
+    "slug": "thai-ai-translate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/thai-translate-icon.png",
+    "scheme": "thaitranslate",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "package": "xyz.autismstaking.thaitranslate",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#1A73E8",
+        "foregroundImage": "./assets/images/thai-translate-foreground.png",
+        "monochromeImage": "./assets/images/thai-translate-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/thai-translate-favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1A73E8",
+          "image": "./assets/images/thai-translate-foreground.png",
+          "imageWidth": 76
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

@@ -1,0 +1,36 @@
+appId: xyz.autismstaking.thaitranslate
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Thai AI Translate"
+- tapOn:
+    id: "mode-control-thai-formal"
+- scrollUntilVisible:
+    element:
+      id: "translation-input"
+    direction: DOWN
+- tapOn:
+    id: "translation-input"
+- inputText: "Спасибо"
+- pressKey: enter
+- scrollUntilVisible:
+    element:
+      id: "translation-output"
+    direction: DOWN
+- assertVisible: "ขอบคุณครับ"
+- scrollUntilVisible:
+    element:
+      id: "latin-pronunciation"
+    direction: DOWN
+- assertVisible: "khop khun khrap"
+- scrollUntilVisible:
+    element:
+      id: "russian-pronunciation"
+    direction: DOWN
+- assertVisible: "кхоп кхун кхрап"
+- scrollUntilVisible:
+    element:
+      id: "speak-result"
+    direction: UP
+- tapOn:
+    id: "speak-result"

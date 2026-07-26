@@ -1,0 +1,31 @@
+{
+  "name": "thai-ai-translate",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @thai-translate/api --filter @thai-translate/client dev",
+    "dev:api": "pnpm --filter @thai-translate/api dev",
+    "dev:web": "EXPO_PUBLIC_API_BASE_URL=http://localhost:3000 pnpm --filter @thai-translate/client web",
+    "build": "pnpm build:contracts && pnpm build:web && pnpm build:api",
+    "build:contracts": "pnpm --filter @thai-translate/contracts build",
+    "build:web": "pnpm --filter @thai-translate/client build:web",
+    "build:api": "pnpm --filter @thai-translate/api build",
+    "build:android": "pnpm --filter @thai-translate/client build:android",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test:unit": "pnpm --filter @thai-translate/contracts test && pnpm --filter @thai-translate/api test && pnpm --filter @thai-translate/client test",
+    "test:e2e:web": "pnpm build:web && playwright test",
+    "test:e2e:android": "maestro test .maestro/translate.yml",
+    "test:live": "pnpm --filter @thai-translate/api test:live",
+    "e2e:serve": "pnpm --filter @thai-translate/api e2e:serve",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test:unit && pnpm test:e2e:web && pnpm build",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0"
+  }
+}
