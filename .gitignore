@@ -16,3 +16,4 @@ apps/client/.vscode/
 apps/client/package-lock.json
 *.apk
 *.aab
+artifacts/*.png
