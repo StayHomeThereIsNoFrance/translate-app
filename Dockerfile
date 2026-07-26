@@ -15,6 +15,8 @@ RUN pnpm --filter @thai-translate/api deploy --prod /opt/api
 
 FROM node:24-alpine AS runtime
 
+RUN apk add --no-cache curl
+
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
