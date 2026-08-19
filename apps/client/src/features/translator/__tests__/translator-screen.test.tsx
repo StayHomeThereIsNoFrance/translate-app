@@ -7,6 +7,27 @@ import { TranslatorScreen } from '../translator-screen';
 const fetchMock = jest.fn();
 globalThis.fetch = fetchMock as typeof fetch;
 
+const pronunciationWords = [
+  {
+    latin: 'khop',
+    russian: 'кхоп',
+    englishTranslation: 'thank',
+    russianTranslation: 'благодарить',
+  },
+  {
+    latin: 'khun',
+    russian: 'кхун',
+    englishTranslation: 'you',
+    russianTranslation: 'вас',
+  },
+  {
+    latin: 'khrap',
+    russian: 'кхрап',
+    englishTranslation: 'polite particle',
+    russianTranslation: 'вежливая частица',
+  },
+];
+
 describe('TranslatorScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,6 +39,7 @@ describe('TranslatorScreen', () => {
         pronunciation: {
           latin: 'khop khun khrap',
           russian: 'кхоп кхун кхрап',
+          words: pronunciationWords,
         },
         requestId: 'test-request',
       }),
@@ -105,6 +127,7 @@ describe('TranslatorScreen', () => {
           pronunciation: {
             latin: 'khop khun khrap',
             russian: 'кхоп кхун кхрап',
+            words: pronunciationWords,
           },
           requestId: 'retry',
         }),
@@ -137,6 +160,7 @@ describe('TranslatorScreen', () => {
           pronunciation: {
             latin: 'khop khun khrap',
             russian: 'кхоп кхун кхрап',
+            words: pronunciationWords,
           },
           requestId: 'after-login',
         }),

@@ -9,7 +9,7 @@ After this change, each token in both pronunciation cards has a small contextual
 ## Progress
 
 - [x] (2026-08-19 13:23Z) Inspected the client, API, shared contracts, prompts, preferences, and current automated tests; created branch `codex/pronunciation-word-translations`.
-- [ ] Extend the provider and public contracts with aligned pronunciation tokens and bilingual contextual glosses, then update fixtures and contract/API tests.
+- [x] (2026-08-19 13:27Z) Extended provider and public contracts with aligned pronunciation tokens and bilingual contextual glosses; updated fixtures and contract/API tests.
 - [ ] Add the persisted visibility preference, settings dialog, token layout, and client tests.
 - [ ] Run repository validation and repair any failures.
 - [ ] Commit and push the branch, deploy it through Coolify, and verify the real web UI without starting it locally.
@@ -21,6 +21,9 @@ After this change, each token in both pronunciation cards has a small contextual
 
 - Observation: Existing preferences are already stored in AsyncStorage under `thai-translate-preferences-v1`; extending that object can preserve existing installations without a storage migration.
   Evidence: `apps/client/src/features/translator/preferences.ts` parses one JSON object and falls back to defaults when storage is absent.
+
+- Observation: The machine's default Homebrew Node 25 binary is unusable because it links to a removed `simdjson.29` library, while the repository requires Node 24.
+  Evidence: The first `pnpm` attempt stopped in `dyld` before running tests. Prepending `/opt/homebrew/opt/node@24/bin` produced Node `v24.18.0`, after which contract and API tests ran normally.
 
 ## Decision Log
 
@@ -38,7 +41,7 @@ After this change, each token in both pronunciation cards has a small contextual
 
 ## Outcomes & Retrospective
 
-Implementation is in progress. The intended outcome is an end-to-end provider-to-UI feature with persisted settings and validation in Coolify.
+The provider/API milestone is complete. Contract tests pass (5 tests), API tests pass (22 tests), and both API and client type checks accept the new response shape. Client rendering and Coolify validation remain.
 
 ## Context and Orientation
 
@@ -121,3 +124,5 @@ The complete public pronunciation strings are computed by joining the `latin` va
 `TranslatorPreferences` in `apps/client/src/features/translator/preferences.ts` must contain `mode`, `speakerGender`, `sourceLanguage`, and `showWordTranslations`. No new dependency is needed: the client already depends on React Native, Ionicons, and AsyncStorage, which provide the modal, switch, gear icon, and persistence mechanisms.
 
 Revision note (2026-08-19 13:23Z): Created the initial self-contained plan after repository and contract inspection. It records the aligned-array design because the existing flat strings cannot support reliable per-token translations.
+
+Revision note (2026-08-19 13:27Z): Marked the contract/API milestone complete, recorded its passing tests, and documented the required Node 24 runtime after the broken default Node binary was discovered.

@@ -17,6 +17,27 @@ const request = {
   speakerGender: 'male' as const,
 };
 
+const pronunciationWords = [
+  {
+    latin: 'khop',
+    russian: 'кхоп',
+    englishTranslation: 'thank',
+    russianTranslation: 'благодарить',
+  },
+  {
+    latin: 'khun',
+    russian: 'кхун',
+    englishTranslation: 'you',
+    russianTranslation: 'вас',
+  },
+  {
+    latin: 'khrap',
+    russian: 'кхрап',
+    englishTranslation: 'polite particle',
+    russianTranslation: 'вежливая частица',
+  },
+];
+
 describe('translation API client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -36,6 +57,7 @@ describe('translation API client', () => {
         pronunciation: {
           latin: 'khop khun khrap',
           russian: 'кхоп кхун кхрап',
+          words: pronunciationWords,
         },
         requestId: 'request-1',
       }),
@@ -61,7 +83,11 @@ describe('translation API client', () => {
       json: async () => ({
         translation: 'ขอบคุณครับ',
         thaiText: 'ขอบคุณครับ',
-        pronunciation: { latin: 'khop khun', russian: 'кхоп кхун' },
+        pronunciation: {
+          latin: 'khop khun khrap',
+          russian: 'кхоп кхун кхрап',
+          words: pronunciationWords,
+        },
         requestId: 'request-2',
       }),
     });
