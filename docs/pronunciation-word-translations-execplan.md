@@ -11,7 +11,7 @@ After this change, each token in both pronunciation cards has a small contextual
 - [x] (2026-08-19 13:23Z) Inspected the client, API, shared contracts, prompts, preferences, and current automated tests; created branch `codex/pronunciation-word-translations`.
 - [x] (2026-08-19 13:27Z) Extended provider and public contracts with aligned pronunciation tokens and bilingual contextual glosses; updated fixtures and contract/API tests.
 - [x] (2026-08-19 13:33Z) Added the persisted visibility preference, settings dialog, wrapping token layout, and client tests.
-- [ ] Run repository validation and repair any failures.
+- [x] (2026-08-19 13:35Z) Ran the full `pnpm verify` pipeline successfully on Node 24, including lint, type checking, 44 unit tests, 6 browser tests, and production builds.
 - [ ] Commit and push the branch, deploy it through Coolify, and verify the real web UI without starting it locally.
 
 ## Surprises & Discoveries
@@ -44,7 +44,7 @@ After this change, each token in both pronunciation cards has a small contextual
 
 ## Outcomes & Retrospective
 
-The provider/API and client milestones are complete. Contract tests pass (5 tests), API tests pass (22 tests), client tests pass (17 tests), and web E2E passes in desktop and mobile Chromium (6 tests). Full repository validation and Coolify QA remain.
+Implementation and repository validation are complete. `pnpm verify` passes: contract tests (5), API tests (22), client tests (17), web E2E in desktop and mobile Chromium (6), plus all lint, type-check, and production build stages. Only feature-branch push and Coolify QA remain.
 
 ## Context and Orientation
 
@@ -131,3 +131,5 @@ Revision note (2026-08-19 13:23Z): Created the initial self-contained plan after
 Revision note (2026-08-19 13:27Z): Marked the contract/API milestone complete, recorded its passing tests, and documented the required Node 24 runtime after the broken default Node binary was discovered.
 
 Revision note (2026-08-19 13:33Z): Marked the client milestone complete, recorded passing unit/E2E evidence, and documented the React Native Web switch selector needed for reliable browser tests.
+
+Revision note (2026-08-19 13:35Z): Recorded the successful full verification pipeline and narrowed the remaining work to push/deployment QA.
