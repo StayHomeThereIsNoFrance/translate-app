@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import * as Speech from 'expo-speech';
 
@@ -46,7 +47,7 @@ describe('TranslatorScreen', () => {
     });
   });
 
-  it('renders the required controls and empty state', () => {
+  it('renders the required controls and empty state', async () => {
     render(<TranslatorScreen />);
     expect(screen.getByText('Farang - Ploy')).toBeTruthy();
     expect(screen.getByText('Thai formal')).toBeTruthy();
@@ -54,6 +55,10 @@ describe('TranslatorScreen', () => {
     expect(screen.getByText('Русский')).toBeTruthy();
     expect(screen.getByText('Тайский')).toBeTruthy();
     expect(screen.getByText('Перевод появится здесь')).toBeTruthy();
+    expect(screen.getByTestId('settings-button')).toBeTruthy();
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenCalled();
+    });
   });
 
   it('translates a phrase and renders both pronunciations', async () => {
@@ -67,18 +72,53 @@ describe('TranslatorScreen', () => {
         'ขอบคุณครับ',
       );
     });
-    expect(screen.getByTestId('latin-pronunciation').props.children).toBe(
-      'khop khun khrap',
-    );
-    expect(screen.getByTestId('russian-pronunciation').props.children).toBe(
-      'кхоп кхун кхрап',
-    );
+    expect(
+      screen.getByTestId('latin-pronunciation-word-0').props.children,
+    ).toBe('khop');
+    expect(
+      screen.getByTestId('russian-pronunciation-word-0').props.children,
+    ).toBe('кхоп');
+    expect(
+      screen.getByTestId('latin-word-translation-0').props.children,
+    ).toBe('thank');
+    expect(
+      screen.getByTestId('russian-word-translation-0').props.children,
+    ).toBe('благодарить');
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/v1/translate'),
       expect.objectContaining({
         body: expect.stringContaining('"mode":"thai-formal"'),
       }),
     );
+  });
+
+  it('hides word translations from settings and saves the choice', async () => {
+    render(<TranslatorScreen />);
+    await waitFor(() => {
+      expect(AsyncStorage.getItem).toHaveBeenCalled();
+    });
+    fireEvent.changeText(screen.getByTestId('translation-input'), 'Спасибо');
+    fireEvent.press(screen.getByTestId('translate-button'));
+    expect(await screen.findByTestId('latin-word-translation-0')).toBeTruthy();
+
+    jest.mocked(AsyncStorage.setItem).mockClear();
+    fireEvent.press(screen.getByTestId('settings-button'));
+    expect(screen.getByText('Настройки')).toBeTruthy();
+    fireEvent(
+      screen.getByTestId('word-translations-switch'),
+      'valueChange',
+      false,
+    );
+
+    expect(screen.queryByTestId('latin-word-translation-0')).toBeNull();
+    expect(screen.queryByTestId('russian-word-translation-0')).toBeNull();
+    expect(screen.getByTestId('latin-pronunciation-word-0')).toBeTruthy();
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'thai-translate-preferences-v1',
+        expect.stringContaining('"showWordTranslations":false'),
+      );
+    });
   });
 
   it('speaks the Thai field', async () => {

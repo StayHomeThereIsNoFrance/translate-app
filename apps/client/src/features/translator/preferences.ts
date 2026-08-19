@@ -12,12 +12,14 @@ const STORAGE_KEY = 'thai-translate-preferences-v1';
 
 export type TranslatorPreferences = {
   mode: TranslationMode;
+  showWordTranslations: boolean;
   speakerGender: SpeakerGender;
   sourceLanguage: Language;
 };
 
 export const defaultPreferences: TranslatorPreferences = {
   mode: 'farang-ploy',
+  showWordTranslations: true,
   speakerGender: 'male',
   sourceLanguage: 'ru',
 };
@@ -29,8 +31,15 @@ export async function loadPreferences(): Promise<TranslatorPreferences> {
       return defaultPreferences;
     }
     const decoded = JSON.parse(raw) as Record<string, unknown>;
+    if (
+      decoded.showWordTranslations !== undefined &&
+      typeof decoded.showWordTranslations !== 'boolean'
+    ) {
+      return defaultPreferences;
+    }
     return {
       mode: TranslationModeSchema.parse(decoded.mode),
+      showWordTranslations: decoded.showWordTranslations ?? true,
       speakerGender: SpeakerGenderSchema.parse(decoded.speakerGender),
       sourceLanguage: LanguageSchema.parse(decoded.sourceLanguage),
     };

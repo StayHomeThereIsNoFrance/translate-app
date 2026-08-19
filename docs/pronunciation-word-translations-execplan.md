@@ -10,7 +10,7 @@ After this change, each token in both pronunciation cards has a small contextual
 
 - [x] (2026-08-19 13:23Z) Inspected the client, API, shared contracts, prompts, preferences, and current automated tests; created branch `codex/pronunciation-word-translations`.
 - [x] (2026-08-19 13:27Z) Extended provider and public contracts with aligned pronunciation tokens and bilingual contextual glosses; updated fixtures and contract/API tests.
-- [ ] Add the persisted visibility preference, settings dialog, token layout, and client tests.
+- [x] (2026-08-19 13:33Z) Added the persisted visibility preference, settings dialog, wrapping token layout, and client tests.
 - [ ] Run repository validation and repair any failures.
 - [ ] Commit and push the branch, deploy it through Coolify, and verify the real web UI without starting it locally.
 
@@ -24,6 +24,9 @@ After this change, each token in both pronunciation cards has a small contextual
 
 - Observation: The machine's default Homebrew Node 25 binary is unusable because it links to a removed `simdjson.29` library, while the repository requires Node 24.
   Evidence: The first `pnpm` attempt stopped in `dyld` before running tests. Prepending `/opt/homebrew/opt/node@24/bin` produced Node `v24.18.0`, after which contract and API tests ran normally.
+
+- Observation: React Native Web puts the `testID` of a `Switch` on a wrapper while the actual checkbox is a nested input with the accessible `switch` role.
+  Evidence: The first Playwright assertion reported that `word-translations-switch` was not a checkbox. Selecting `getByRole('switch', { name: 'Показывать перевод под словами' })` allowed checked-state and click assertions to pass on desktop and mobile projects.
 
 ## Decision Log
 
@@ -41,7 +44,7 @@ After this change, each token in both pronunciation cards has a small contextual
 
 ## Outcomes & Retrospective
 
-The provider/API milestone is complete. Contract tests pass (5 tests), API tests pass (22 tests), and both API and client type checks accept the new response shape. Client rendering and Coolify validation remain.
+The provider/API and client milestones are complete. Contract tests pass (5 tests), API tests pass (22 tests), client tests pass (17 tests), and web E2E passes in desktop and mobile Chromium (6 tests). Full repository validation and Coolify QA remain.
 
 ## Context and Orientation
 
@@ -126,3 +129,5 @@ The complete public pronunciation strings are computed by joining the `latin` va
 Revision note (2026-08-19 13:23Z): Created the initial self-contained plan after repository and contract inspection. It records the aligned-array design because the existing flat strings cannot support reliable per-token translations.
 
 Revision note (2026-08-19 13:27Z): Marked the contract/API milestone complete, recorded its passing tests, and documented the required Node 24 runtime after the broken default Node binary was discovered.
+
+Revision note (2026-08-19 13:33Z): Marked the client milestone complete, recorded passing unit/E2E evidence, and documented the React Native Web switch selector needed for reliable browser tests.
