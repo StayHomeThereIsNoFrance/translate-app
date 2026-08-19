@@ -12,7 +12,7 @@ After this change, each token in both pronunciation cards has a small contextual
 - [x] (2026-08-19 13:27Z) Extended provider and public contracts with aligned pronunciation tokens and bilingual contextual glosses; updated fixtures and contract/API tests.
 - [x] (2026-08-19 13:33Z) Added the persisted visibility preference, settings dialog, wrapping token layout, and client tests.
 - [x] (2026-08-19 13:35Z) Ran the full `pnpm verify` pipeline successfully on Node 24, including lint, type checking, 44 unit tests, 6 browser tests, and production builds.
-- [ ] Commit and push the branch, deploy it through Coolify, and verify the real web UI without starting it locally.
+- [x] (2026-08-19 13:48Z) Pushed the branch, switched the Coolify application to it, deployed commit `b38d1ba`, and verified live translation, desktop/mobile layout, toggling, and persistence on the production URL.
 
 ## Surprises & Discoveries
 
@@ -27,6 +27,9 @@ After this change, each token in both pronunciation cards has a small contextual
 
 - Observation: React Native Web puts the `testID` of a `Switch` on a wrapper while the actual checkbox is a nested input with the accessible `switch` role.
   Evidence: The first Playwright assertion reported that `word-translations-switch` was not a checkbox. Selecting `getByRole('switch', { name: 'Показывать перевод под словами' })` allowed checked-state and click assertions to pass on desktop and mobile projects.
+
+- Observation: The live provider can use multiple words in a gloss, so a token column must be allowed to widen and wrap independently rather than assume one gloss word per pronunciation token.
+  Evidence: Live output for `Как тебя зовут?` included `polite male particle` / `вежливая мужская частица`; both remained contained in their cards at 1440 px and 390 px viewports.
 
 ## Decision Log
 
@@ -44,7 +47,7 @@ After this change, each token in both pronunciation cards has a small contextual
 
 ## Outcomes & Retrospective
 
-Implementation and repository validation are complete. `pnpm verify` passes: contract tests (5), API tests (22), client tests (17), web E2E in desktop and mobile Chromium (6), plus all lint, type-check, and production build stages. Only feature-branch push and Coolify QA remain.
+The requested feature is complete on branch `codex/pronunciation-word-translations`. `pnpm verify` passes: contract tests (5), API tests (22), client tests (17), web E2E in desktop and mobile Chromium (6), plus all lint, type-check, and production build stages. Coolify deployment `lkozo74eqpo9y18v2tjs3oxe` finished healthy from commit `b38d1ba`, and live QA confirmed bilingual word glosses, correct hiding behavior, persisted preference, and responsive wrapping. The application remains on the feature branch pending user approval; no merge to `main` has been performed.
 
 ## Context and Orientation
 
@@ -120,6 +123,8 @@ The intended model token shape is:
 
 The complete public pronunciation strings are computed by joining the `latin` values and the `russian` values with one space. This guarantees that the visible word stacks and compatibility strings originate from identical data.
 
+Coolify QA used the public application at `https://translate.hetz.autismstaking.xyz`. The live phrase `Как тебя зовут?` produced aligned tokens `khun`, `chue`, `arai`, and `khráp?` with contextual English and Russian glosses. Screenshots were inspected at 1440×1000 and 390×844; temporary screenshots were kept outside the repository under `/tmp` and were not committed.
+
 ## Interfaces and Dependencies
 
 `packages/contracts/src/index.ts` must export the inferred pronunciation word type through the schemas. `ModelTranslation` must contain `translation`, `thaiText`, and `pronunciationWords`. `TranslationResult` must contain `translation`, `thaiText`, `requestId`, and `pronunciation` with `latin`, `russian`, and `words`.
@@ -133,3 +138,5 @@ Revision note (2026-08-19 13:27Z): Marked the contract/API milestone complete, r
 Revision note (2026-08-19 13:33Z): Marked the client milestone complete, recorded passing unit/E2E evidence, and documented the React Native Web switch selector needed for reliable browser tests.
 
 Revision note (2026-08-19 13:35Z): Recorded the successful full verification pipeline and narrowed the remaining work to push/deployment QA.
+
+Revision note (2026-08-19 13:48Z): Marked the plan complete with the healthy Coolify deployment identifier, live responsive UI evidence, persisted setting verification, and final branch state pending approval.
