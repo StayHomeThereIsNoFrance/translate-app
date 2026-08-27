@@ -28,6 +28,8 @@ describe('PromptRepository', () => {
 
     expect(rendered).toContain('female');
     expect(rendered).toContain('ค่ะ');
+    expect(rendered).toContain('englishTranslation');
+    expect(rendered).toContain('russianTranslation');
     expect(rendered).not.toContain('{{');
     expect(rendered).not.toContain('Farang - Ploy');
   });

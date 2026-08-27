@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('translates a Russian phrase and shows Thai pronunciations', async ({
+test('translates a Russian phrase and configures pronunciation glosses', async ({
   context,
   page,
 }) => {
@@ -32,11 +32,13 @@ test('translates a Russian phrase and shows Thai pronunciations', async ({
 
   await expect(page.getByTestId('translation-output')).toHaveText('ขอบคุณครับ');
   await expect(page.getByTestId('thai-text')).toHaveText('ขอบคุณครับ');
-  await expect(page.getByTestId('latin-pronunciation')).toHaveText(
-    'khop khun khrap',
+  await expect(page.getByTestId('latin-pronunciation-word-0')).toHaveText('khop');
+  await expect(page.getByTestId('russian-pronunciation-word-0')).toHaveText(
+    'кхоп',
   );
-  await expect(page.getByTestId('russian-pronunciation')).toHaveText(
-    'кхоп кхун кхрап',
+  await expect(page.getByTestId('latin-word-translation-0')).toHaveText('thank');
+  await expect(page.getByTestId('russian-word-translation-0')).toHaveText(
+    'благодарить',
   );
   await page.getByTestId('speak-result').click();
   await expect
@@ -52,6 +54,21 @@ test('translates a Russian phrase and shows Thai pronunciations', async ({
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(
     'ขอบคุณครับ',
   );
+
+  await page.getByTestId('settings-button').click();
+  const wordTranslationsSwitch = page.getByRole('switch', {
+    name: 'Показывать перевод под словами',
+  });
+  await expect(wordTranslationsSwitch).toBeChecked();
+  await wordTranslationsSwitch.click();
+  await expect(page.getByTestId('latin-word-translation-0')).toBeHidden();
+  await expect(page.getByTestId('russian-word-translation-0')).toBeHidden();
+  await expect(page.getByTestId('latin-pronunciation-word-0')).toBeVisible();
+
+  await page.reload();
+  await page.getByTestId('settings-button').click();
+  await expect(wordTranslationsSwitch).not.toBeChecked();
+  await wordTranslationsSwitch.click();
 });
 
 test('changes gender and translation direction', async ({ page }) => {

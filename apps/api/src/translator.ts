@@ -29,15 +29,28 @@ const translationJsonSchema = {
   properties: {
     translation: { type: 'string', minLength: 1 },
     thaiText: { type: 'string', minLength: 1 },
-    pronunciationLatin: { type: 'string', minLength: 1 },
-    pronunciationRussian: { type: 'string', minLength: 1 },
+    pronunciationWords: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          latin: { type: 'string', minLength: 1 },
+          russian: { type: 'string', minLength: 1 },
+          englishTranslation: { type: 'string', minLength: 1 },
+          russianTranslation: { type: 'string', minLength: 1 },
+        },
+        required: [
+          'latin',
+          'russian',
+          'englishTranslation',
+          'russianTranslation',
+        ],
+      },
+    },
   },
-  required: [
-    'translation',
-    'thaiText',
-    'pronunciationLatin',
-    'pronunciationRussian',
-  ],
+  required: ['translation', 'thaiText', 'pronunciationWords'],
 } as const;
 
 export class CliproxyTranslationService implements TranslationService {

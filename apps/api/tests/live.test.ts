@@ -53,8 +53,11 @@ live('live cliproxyapi translation', () => {
       expect(result.translation).toContain('ขอบคุณ');
       expect(result.translation).toContain('ครับ');
       expect(result.translation).not.toMatch(/ค่ะ|คะ/);
-      expect(result.pronunciationLatin.length).toBeGreaterThan(3);
-      expect(result.pronunciationRussian.length).toBeGreaterThan(3);
+      expect(result.pronunciationWords.length).toBeGreaterThan(0);
+      expect(result.pronunciationWords[0]?.latin.length).toBeGreaterThan(0);
+      expect(
+        result.pronunciationWords[0]?.russianTranslation.length,
+      ).toBeGreaterThan(0);
     },
     60_000,
   );

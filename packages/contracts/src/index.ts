@@ -25,12 +25,24 @@ export const TranslationRequestSchema = z
 
 export type TranslationRequest = z.infer<typeof TranslationRequestSchema>;
 
+export const PronunciationWordSchema = z.object({
+  latin: z.string().trim().min(1),
+  russian: z.string().trim().min(1),
+  englishTranslation: z.string().trim().min(1),
+  russianTranslation: z.string().trim().min(1),
+});
+
+export type PronunciationWord = z.infer<typeof PronunciationWordSchema>;
+
+const PronunciationWordsSchema = z.array(PronunciationWordSchema).min(1);
+
 export const TranslationResultSchema = z.object({
   translation: z.string().trim().min(1),
   thaiText: z.string().trim().min(1),
   pronunciation: z.object({
     latin: z.string().trim().min(1),
     russian: z.string().trim().min(1),
+    words: PronunciationWordsSchema,
   }),
   requestId: z.string().min(1),
 });
@@ -40,8 +52,7 @@ export type TranslationResult = z.infer<typeof TranslationResultSchema>;
 export const ModelTranslationSchema = z.object({
   translation: z.string().trim().min(1),
   thaiText: z.string().trim().min(1),
-  pronunciationLatin: z.string().trim().min(1),
-  pronunciationRussian: z.string().trim().min(1),
+  pronunciationWords: PronunciationWordsSchema,
 });
 
 export type ModelTranslation = z.infer<typeof ModelTranslationSchema>;

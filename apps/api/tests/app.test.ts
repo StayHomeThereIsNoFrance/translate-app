@@ -12,8 +12,26 @@ import { testConfig } from './helpers.js';
 const result: ModelTranslation = {
   translation: 'ขอบคุณครับ',
   thaiText: 'ขอบคุณครับ',
-  pronunciationLatin: 'khop khun khrap',
-  pronunciationRussian: 'кхоп кхун кхрап',
+  pronunciationWords: [
+    {
+      latin: 'khop',
+      russian: 'кхоп',
+      englishTranslation: 'thank',
+      russianTranslation: 'благодарить',
+    },
+    {
+      latin: 'khun',
+      russian: 'кхун',
+      englishTranslation: 'you',
+      russianTranslation: 'вас',
+    },
+    {
+      latin: 'khrap',
+      russian: 'кхрап',
+      englishTranslation: 'polite particle',
+      russianTranslation: 'вежливая частица',
+    },
+  ],
 };
 
 afterEach(() => vi.restoreAllMocks());
@@ -63,6 +81,7 @@ describe('translation API', () => {
       pronunciation: {
         latin: 'khop khun khrap',
         russian: 'кхоп кхун кхрап',
+        words: result.pronunciationWords,
       },
     });
     expect(translate).toHaveBeenCalledWith(

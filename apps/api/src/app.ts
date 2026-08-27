@@ -164,8 +164,13 @@ export async function buildApp({
           translation: result.translation,
           thaiText: result.thaiText,
           pronunciation: {
-            latin: result.pronunciationLatin,
-            russian: result.pronunciationRussian,
+            latin: result.pronunciationWords
+              .map((word) => word.latin)
+              .join(' '),
+            russian: result.pronunciationWords
+              .map((word) => word.russian)
+              .join(' '),
+            words: result.pronunciationWords,
           },
           requestId: request.id,
         };

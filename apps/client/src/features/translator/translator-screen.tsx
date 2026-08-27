@@ -4,6 +4,7 @@ import {
   SPEAKER_GENDERS,
   TRANSLATION_MODES,
   type Language,
+  type PronunciationWord,
   type SpeakerGender,
   type TranslationMode,
   type TranslationResult,
@@ -20,6 +21,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   useWindowDimensions,
@@ -121,6 +123,89 @@ function PinModal({
   );
 }
 
+function SettingsModal({
+  onChangeWordTranslations,
+  onClose,
+  showWordTranslations,
+  visible,
+}: {
+  onChangeWordTranslations: (value: boolean) => void;
+  onClose: () => void;
+  showWordTranslations: boolean;
+  visible: boolean;
+}) {
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.settingsCard}>
+          <View style={styles.settingsHeader}>
+            <Text style={styles.settingsTitle}>Настройки</Text>
+            <IconButton
+              icon="close"
+              label="Закрыть настройки"
+              onPress={onClose}
+              testID="settings-close"
+            />
+          </View>
+          <View style={styles.settingsRow}>
+            <View style={styles.settingsCopy}>
+              <Text style={styles.settingsLabel}>Перевод под словами</Text>
+              <Text style={styles.settingsDescription}>
+                Показывать английский и русский перевод под произношением
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Показывать перевод под словами"
+              onValueChange={onChangeWordTranslations}
+              thumbColor={showWordTranslations ? '#ffffff' : '#f4f6f8'}
+              trackColor={{ false: '#b8c4cf', true: '#1a73e8' }}
+              value={showWordTranslations}
+              testID="word-translations-switch"
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function PronunciationWords({
+  language,
+  showTranslations,
+  words,
+}: {
+  language: 'latin' | 'russian';
+  showTranslations: boolean;
+  words: PronunciationWord[];
+}) {
+  return (
+    <View style={styles.pronunciationWords} testID={`${language}-pronunciation`}>
+      {words.map((word, index) => (
+        <View key={`${word.latin}-${index}`} style={styles.pronunciationWord}>
+          <Text
+            style={styles.pronunciation}
+            testID={`${language}-pronunciation-word-${index}`}>
+            {language === 'latin' ? word.latin : word.russian}
+          </Text>
+          {showTranslations ? (
+            <Text
+              style={styles.wordTranslation}
+              testID={`${language}-word-translation-${index}`}>
+              {language === 'latin'
+                ? word.englishTranslation
+                : word.russianTranslation}
+            </Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function TranslatorScreen() {
   const { width } = useWindowDimensions();
   const desktop = width >= 840;
@@ -134,6 +219,10 @@ export function TranslatorScreen() {
   const [speakerGender, setSpeakerGender] = useState<SpeakerGender>(
     defaultPreferences.speakerGender,
   );
+  const [showWordTranslations, setShowWordTranslations] = useState(
+    defaultPreferences.showWordTranslations,
+  );
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [text, setText] = useState('');
   const [result, setResult] = useState<TranslationResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -143,19 +232,36 @@ export function TranslatorScreen() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   useEffect(() => {
+    let active = true;
     void loadPreferences().then((preferences) => {
+      if (!active) {
+        return;
+      }
       setMode(preferences.mode);
+      setShowWordTranslations(preferences.showWordTranslations);
       setSpeakerGender(preferences.speakerGender);
       setSourceLanguage(preferences.sourceLanguage);
       setTargetLanguage(preferences.sourceLanguage === 'ru' ? 'th' : 'ru');
+      setPreferencesLoaded(true);
     });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    void savePreferences({ mode, speakerGender, sourceLanguage });
-  }, [mode, speakerGender, sourceLanguage]);
+    if (preferencesLoaded) {
+      void savePreferences({
+        mode,
+        showWordTranslations,
+        speakerGender,
+        sourceLanguage,
+      });
+    }
+  }, [mode, preferencesLoaded, showWordTranslations, speakerGender, sourceLanguage]);
 
   const modeDescription = useMemo(
     () => TRANSLATION_MODES.find((item) => item.id === mode)?.description,
@@ -257,10 +363,16 @@ export function TranslatorScreen() {
             <View style={styles.brandMark}>
               <Text style={styles.brandThai}>ก</Text>
             </View>
-            <View>
+            <View style={styles.brandCopy}>
               <Text style={styles.brandTitle}>Thai AI Translate</Text>
               <Text style={styles.brandSubtitle}>Русский ↔ Тайский</Text>
             </View>
+            <IconButton
+              icon="settings-outline"
+              label="Открыть настройки"
+              onPress={() => setSettingsVisible(true)}
+              testID="settings-button"
+            />
           </View>
 
           <View style={styles.controlsCard}>
@@ -412,19 +524,19 @@ export function TranslatorScreen() {
                   <View style={styles.pronunciationRow}>
                     <View style={styles.pronunciationItem}>
                       <Text style={styles.resultLabel}>Произношение EN</Text>
-                      <Text
-                        style={styles.pronunciation}
-                        testID="latin-pronunciation">
-                        {result.pronunciation.latin}
-                      </Text>
+                      <PronunciationWords
+                        language="latin"
+                        showTranslations={showWordTranslations}
+                        words={result.pronunciation.words}
+                      />
                     </View>
                     <View style={styles.pronunciationItem}>
                       <Text style={styles.resultLabel}>Произношение RU</Text>
-                      <Text
-                        style={styles.pronunciation}
-                        testID="russian-pronunciation">
-                        {result.pronunciation.russian}
-                      </Text>
+                      <PronunciationWords
+                        language="russian"
+                        showTranslations={showWordTranslations}
+                        words={result.pronunciation.words}
+                      />
                     </View>
                   </View>
                 </View>
@@ -467,6 +579,12 @@ export function TranslatorScreen() {
         onSubmit={(pin) => void submitPin(pin)}
         visible={pinVisible}
       />
+      <SettingsModal
+        onChangeWordTranslations={setShowWordTranslations}
+        onClose={() => setSettingsVisible(false)}
+        showWordTranslations={showWordTranslations}
+        visible={settingsVisible}
+      />
     </SafeAreaView>
   );
 }
@@ -491,6 +609,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 22,
+  },
+  brandCopy: {
+    flex: 1,
   },
   brandMark: {
     alignItems: 'center',
@@ -724,6 +845,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 23,
   },
+  pronunciationWords: {
+    alignItems: 'flex-start',
+    columnGap: 11,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 8,
+  },
+  pronunciationWord: {
+    alignItems: 'flex-start',
+    maxWidth: 126,
+  },
+  wordTranslation: {
+    color: '#7890a5',
+    fontSize: 11,
+    lineHeight: 14,
+    marginTop: 1,
+  },
   emptyResult: {
     alignItems: 'center',
     flex: 1,
@@ -838,5 +976,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 10,
     textAlign: 'center',
+  },
+  settingsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    maxWidth: 480,
+    padding: 22,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 26,
+    width: '100%',
+  },
+  settingsHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  settingsTitle: {
+    color: '#172b3a',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  settingsRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 18,
+  },
+  settingsCopy: {
+    flex: 1,
+  },
+  settingsLabel: {
+    color: '#314a5e',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  settingsDescription: {
+    color: '#75879a',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
   },
 });

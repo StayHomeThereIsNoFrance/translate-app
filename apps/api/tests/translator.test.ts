@@ -20,8 +20,26 @@ const request: TranslationRequest = {
 const validOutput = JSON.stringify({
   translation: 'ขอบคุณครับ',
   thaiText: 'ขอบคุณครับ',
-  pronunciationLatin: 'khop khun khrap',
-  pronunciationRussian: 'кхоп кхун кхрап',
+  pronunciationWords: [
+    {
+      latin: 'khop',
+      russian: 'кхоп',
+      englishTranslation: 'thank',
+      russianTranslation: 'благодарить',
+    },
+    {
+      latin: 'khun',
+      russian: 'кхун',
+      englishTranslation: 'you',
+      russianTranslation: 'вас',
+    },
+    {
+      latin: 'khrap',
+      russian: 'кхрап',
+      englishTranslation: 'polite particle',
+      russianTranslation: 'вежливая частица',
+    },
+  ],
 });
 
 function serviceWith(responseOrError: unknown) {
@@ -48,7 +66,12 @@ describe('CliproxyTranslationService', () => {
 
     await expect(service.translate(request)).resolves.toMatchObject({
       translation: 'ขอบคุณครับ',
-      pronunciationRussian: 'кхоп кхун кхрап',
+      pronunciationWords: expect.arrayContaining([
+        expect.objectContaining({
+          latin: 'khop',
+          russianTranslation: 'благодарить',
+        }),
+      ]),
     });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
