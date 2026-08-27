@@ -14,8 +14,8 @@ After this change, each token in both pronunciation cards has a small contextual
 - [x] (2026-08-19 13:35Z) Ran the full `pnpm verify` pipeline successfully on Node 24, including lint, type checking, 44 unit tests, 6 browser tests, and production builds.
 - [x] (2026-08-19 13:48Z) Pushed the branch, switched the Coolify application to it, deployed commit `b38d1ba`, and verified live translation, desktop/mobile layout, toggling, and persistence on the production URL.
 - [x] (2026-08-27 16:27Z) Received user approval to merge and bumped the Android release to app version `1.1.0`, version code `2` before producing the updated APK.
-- [ ] Merge the approved feature branch into `main`, push it, deploy `main` through Coolify, and confirm a healthy production deployment.
-- [ ] Build and inspect the updated arm64 preview APK from `main` and hand off its path and checksum.
+- [x] (2026-08-27 16:30Z) Merged the approved feature branch into `main` as commit `4b6ec9b`, pushed it, switched Coolify back to `main`, and confirmed deployment `mt92p9kycczlsm21ff32bnqf` and the production health endpoint are healthy.
+- [x] (2026-08-27 16:37Z) Built and inspected the updated arm64 preview APK from `main`: package `xyz.autismstaking.thaitranslate`, version `1.1.0` (code `2`), SHA-256 `3da0387f9efb006a7270f40b344807e5f382a40787b03afdd0fee412f4004cdd`.
 
 ## Surprises & Discoveries
 
@@ -34,6 +34,9 @@ After this change, each token in both pronunciation cards has a small contextual
 - Observation: The live provider can use multiple words in a gloss, so a token column must be allowed to widen and wrap independently rather than assume one gloss word per pronunciation token.
   Evidence: Live output for `Как тебя зовут?` included `polite male particle` / `вежливая мужская частица`; both remained contained in their cards at 1440 px and 390 px viewports.
 
+- Observation: The local Android toolchain was installed but not selected by the shell environment.
+  Evidence: The first release build attempts found Java 16 and then no Android SDK. Selecting Android Studio's bundled Java runtime and `/Users/j/Library/Android/sdk` produced a successful Gradle release build in 4m 59s.
+
 ## Decision Log
 
 - Decision: Ask the translation provider for one aligned array whose entries contain Latin pronunciation, Cyrillic pronunciation, an English gloss, and a Russian gloss.
@@ -50,7 +53,9 @@ After this change, each token in both pronunciation cards has a small contextual
 
 ## Outcomes & Retrospective
 
-The requested feature is complete on branch `codex/pronunciation-word-translations`. `pnpm verify` passes: contract tests (5), API tests (22), client tests (17), web E2E in desktop and mobile Chromium (6), plus all lint, type-check, and production build stages. Coolify deployment `lkozo74eqpo9y18v2tjs3oxe` finished healthy from commit `b38d1ba`, and live QA confirmed bilingual word glosses, correct hiding behavior, persisted preference, and responsive wrapping. The application remains on the feature branch pending user approval; no merge to `main` has been performed.
+The requested feature is complete and merged into `main` as merge commit `4b6ec9b`. `pnpm verify` passes: contract tests (5), API tests (22), client tests (17), web E2E in desktop and mobile Chromium (6), plus all lint, type-check, and production build stages. Coolify deployment `mt92p9kycczlsm21ff32bnqf` finished healthy from the merge commit with the application configured for `main`; the production health endpoint returned `ok`. Earlier live QA confirmed bilingual word glosses, correct hiding behavior, persisted preference, and responsive wrapping.
+
+The updated Android preview is `apps/client/android/app/build/outputs/apk/release/app-release.apk`. Android package inspection reports `xyz.autismstaking.thaitranslate`, version `1.1.0`, version code `2`, minimum SDK 24, target SDK 36, and only the `arm64-v8a` ABI. APK signature verification passes with the existing preview/debug signing certificate. The artifact is 42,753,345 bytes and has SHA-256 `3da0387f9efb006a7270f40b344807e5f382a40787b03afdd0fee412f4004cdd`. No Android device was connected for an installation smoke test.
 
 ## Context and Orientation
 
@@ -145,3 +150,5 @@ Revision note (2026-08-19 13:35Z): Recorded the successful full verification pip
 Revision note (2026-08-19 13:48Z): Marked the plan complete with the healthy Coolify deployment identifier, live responsive UI evidence, persisted setting verification, and final branch state pending approval.
 
 Revision note (2026-08-27 16:27Z): Reopened delivery work after user approval, recorded the Android version increment required for an installable update, and added merge, production deployment, and APK handoff steps.
+
+Revision note (2026-08-27 16:37Z): Closed delivery after merging and deploying `main`, recorded the healthy Coolify deployment, and captured the rebuilt APK's verified package metadata, architecture, signing status, size, and checksum.
