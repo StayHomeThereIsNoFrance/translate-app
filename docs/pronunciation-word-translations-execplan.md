@@ -13,6 +13,9 @@ After this change, each token in both pronunciation cards has a small contextual
 - [x] (2026-08-19 13:33Z) Added the persisted visibility preference, settings dialog, wrapping token layout, and client tests.
 - [x] (2026-08-19 13:35Z) Ran the full `pnpm verify` pipeline successfully on Node 24, including lint, type checking, 44 unit tests, 6 browser tests, and production builds.
 - [x] (2026-08-19 13:48Z) Pushed the branch, switched the Coolify application to it, deployed commit `b38d1ba`, and verified live translation, desktop/mobile layout, toggling, and persistence on the production URL.
+- [x] (2026-08-27 16:27Z) Received user approval to merge and bumped the Android release to app version `1.1.0`, version code `2` before producing the updated APK.
+- [ ] Merge the approved feature branch into `main`, push it, deploy `main` through Coolify, and confirm a healthy production deployment.
+- [ ] Build and inspect the updated arm64 preview APK from `main` and hand off its path and checksum.
 
 ## Surprises & Discoveries
 
@@ -140,3 +143,5 @@ Revision note (2026-08-19 13:33Z): Marked the client milestone complete, recorde
 Revision note (2026-08-19 13:35Z): Recorded the successful full verification pipeline and narrowed the remaining work to push/deployment QA.
 
 Revision note (2026-08-19 13:48Z): Marked the plan complete with the healthy Coolify deployment identifier, live responsive UI evidence, persisted setting verification, and final branch state pending approval.
+
+Revision note (2026-08-27 16:27Z): Reopened delivery work after user approval, recorded the Android version increment required for an installable update, and added merge, production deployment, and APK handoff steps.
