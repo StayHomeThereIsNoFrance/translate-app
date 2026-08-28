@@ -13,10 +13,10 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
 - [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, phrase E2E acceptance, and recovery guidance.
 - [x] (2026-08-29) Removed the discovered PIN/session mechanism from the API and client, including JWT, cookie, bearer-token, SecureStore, production-secret configuration, UI, tests, and dependencies; verified 19 API tests and 12 client tests.
-- [x] (2026-08-29) Made the physical E2E keep the phone awake for the bounded run and restore its original 30-second timeout on exit; a full build/install retry proved both the keep-awake behavior and restoration.
+- [x] (2026-08-29) Made the physical E2E keep the phone awake for the bounded run and restore the timeout that was active before the run; the user subsequently chose to keep the phone at ten minutes.
 - [x] (2026-08-29) Pushed commit `5239fca`, switched Coolify to `codex/s22-wireless-deploy`, removed the obsolete production/preview authentication secrets, and verified healthy deployment `fufx8rz06pjgr5b6hpevsm3b` plus a live browser translation without a PIN dialog.
-- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, repeatedly built/installed/launched version 1.1.0 over Wi-Fi, and deployed the authentication-free production API; remaining: unlock the system screen and run the final phrase flow).
-- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 36 unit tests, production web/API builds, production arm64 APK build/inspection, Coolify QA, and physical deploy; remaining: physical E2E evidence and final plan push).
+- [x] (2026-08-29) Paired the actual `SM-S906E`, deployed version 1.1.0 over authenticated wireless ADB, and passed the clean-state production phrase E2E on that phone.
+- [x] (2026-08-29) Ran repository validation, recorded Coolify/browser/physical-device evidence, committed each milestone, and left the feature branch unmerged pending user approval.
 
 ## Surprises & Discoveries
 
@@ -88,7 +88,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 ## Outcomes & Retrospective
 
-Repository-side automation and the authentication-free application changes are implemented. Lint, type checking, all 36 unit tests, and production web/API builds pass. Coolify is healthy on commit `5239fca`; a deployed browser translated `Спасибо` to `ขอบคุณครับ` through a 200 API response, rendered both pronunciation sections, and showed no PIN UI. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. Only the final clean-state phone flow remains, currently waiting for the Android system screen to be unlocked.
+Repository-side automation and the authentication-free application changes are implemented. Lint, type checking, all 36 unit tests, and production web/API builds pass. Coolify is healthy on commit `5239fca`; a deployed browser translated `Спасибо` to `ขอบคุณครับ` through a 200 API response, rendered both pronunciation sections, and showed no PIN UI. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command deployment work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. The final clean-state Maestro flow passed all steps on that phone, including the live Thai result and both pronunciation blocks. The phone's screen timeout remains ten minutes at the user's request.
 
 ## Context and Orientation
 
@@ -197,7 +197,8 @@ Validated APK evidence:
     min/target SDK: 24/36
     ABI: arm64-v8a
     signature: APK Signature Scheme v2 verified
-    SHA-256 of the installed build: 5c7adba8eda79d5cf79e82464f3033b27c68d330d94d843ab94983e13d122da6
+    SHA-256 of the final E2E build: 5e1cf3e48413f870d3455c015d95fe2602de3f162781d8889e6e408d113614a9
+    size: 42,584,169 bytes
 
 Repository verification before physical pairing passed 5 contract, 22 API, and 17 client unit tests, for 44 total tests. The first clean Android build completed in 8 minutes 33 seconds; the corrected production-mode Gradle rerun completed successfully without the `NODE_ENV` warning.
 
@@ -211,6 +212,17 @@ Physical deployment evidence:
     install result: Success
     installed version: 1.1.0 (versionCode 2), arm64-v8a
     launched activity: xyz.autismstaking.thaitranslate/.MainActivity
+
+Final physical phrase E2E evidence:
+
+    command: pnpm test:e2e:android:s22
+    device: adb-RFCT60EX4DB-c8dtcQ._adb-tls-connect._tcp (SM-S906E)
+    install result: Success
+    phrase: Спасибо
+    observed/asserted translation: ขอบคุณครับ
+    pronunciation checks: Latin visible; Cyrillic visible
+    Maestro result: all 16 steps passed
+    screen timeout after completion: 600000 ms (ten minutes, retained at user request)
 
 The production Android API origin embedded during deployment is:
 
@@ -256,3 +268,5 @@ Revision note (2026-08-29): Hardened the E2E command after an unlocked retry sle
 Revision note (2026-08-29): The keep-awake retry exposed the production API's deferred PIN prompt. Expanded the plan per the user's direction to remove authentication from the API and client, validate the revised stack, deploy the branch through Coolify, and only then rerun the production-backed S22+ flow.
 
 Revision note (2026-08-29): Recorded the healthy Coolify branch deployment, deletion of obsolete authentication environment variables, and successful production browser translation without PIN UI. Also recorded the non-code Playwright browser-install limitation and the final phone-lock preflight awaiting one system unlock.
+
+Revision note (2026-08-29): Recorded the successful final build, wireless install, and clean-state Maestro translation flow on the physical S22+. All phrase, Thai output, and pronunciation assertions passed. Kept the device's screen timeout at ten minutes at the user's request.
