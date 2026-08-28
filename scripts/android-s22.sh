@@ -112,11 +112,11 @@ configure_android_build_environment() {
   local android_studio_jdk='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
   local user_home_directory
 
-  require_command node
-  require_command pnpm
   if [[ -x "$node24_bin/node" ]]; then
     export PATH="$node24_bin:$PATH"
   fi
+  require_command node
+  require_command pnpm
   [[ "$(node -p 'process.versions.node.split(".")[0]')" == '24' ]] ||
     fail 'Android builds require Node 24. Select Node 24 and retry.'
 

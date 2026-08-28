@@ -13,7 +13,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with production PIN authentication and explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
 - [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, production-PIN handling, phrase E2E acceptance, and recovery guidance.
 - [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it.
-- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval.
+- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 44 unit tests, production arm64 APK build/inspection; remaining: physical deploy/E2E evidence and final branch push).
 
 ## Surprises & Discoveries
 
@@ -52,7 +52,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 ## Outcomes & Retrospective
 
-Implementation is in progress. Repository-side automation and physical-device evidence are not complete yet.
+Repository-side automation and documentation are implemented. Shell and Maestro syntax checks, lint, type checking, all 44 unit tests, and the production arm64 APK build pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Physical-device pairing, installation, and phrase E2E remain pending because Wireless debugging is not yet enabled or paired on the user's S22+.
 
 ## Context and Orientation
 
@@ -157,6 +157,17 @@ The current output APK path is:
 
     apps/client/android/app/build/outputs/apk/release/app-release.apk
 
+Validated APK evidence:
+
+    package: xyz.autismstaking.thaitranslate
+    version: 1.1.0 (versionCode 2)
+    min/target SDK: 24/36
+    ABI: arm64-v8a
+    signature: APK Signature Scheme v2 verified
+    SHA-256: 0c0d11ff23155dbec045c192ebea68526773a6e7fad5242489e199ae9c84b972
+
+Repository verification before physical pairing passed 5 contract, 22 API, and 17 client unit tests, for 44 total tests. The first clean Android build completed in 8 minutes 33 seconds; the corrected production-mode Gradle rerun completed successfully without the `NODE_ENV` warning.
+
 The production Android API origin embedded during deployment is:
 
     https://translate.hetz.autismstaking.xyz
@@ -176,3 +187,5 @@ Revision note (2026-08-28 15:47Z): Added a separate S22+ production flow so the 
 Revision note (2026-08-28 15:49Z): Marked documentation complete after adding the physical S22+ phrase test to `docs/initplan.md` and documenting pairing, deploy, test, target selection, secret handling, and recovery in the root guide and architecture.
 
 Revision note (2026-08-28 15:59Z): Recorded the successful first arm64 APK build and its `NODE_ENV` scope warning. Updated both Android build variants so the Gradle bundling phase is explicitly production-mode as well as the Expo Prebuild phase.
+
+Revision note (2026-08-28 16:01Z): Added pre-device validation evidence and APK metadata. The only remaining acceptance work requires the user to enable Wireless debugging for pairing and provide production authentication during the clean-state phrase flow.
