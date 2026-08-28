@@ -429,12 +429,6 @@ export function TranslatorScreen() {
                     {result.translation}
                   </Text>
                   <View style={styles.divider} />
-                  <View style={styles.resultSection}>
-                    <Text style={styles.resultLabel}>Тайское написание</Text>
-                    <Text style={styles.thaiText} testID="thai-text">
-                      {result.thaiText}
-                    </Text>
-                  </View>
                   <View style={styles.pronunciationRow}>
                     <View style={styles.pronunciationItem}>
                       <Text style={styles.resultLabel}>Произношение EN</Text>
@@ -465,7 +459,7 @@ export function TranslatorScreen() {
                   </View>
                   <Text style={styles.emptyTitle}>Перевод появится здесь</Text>
                   <Text style={styles.emptySubtitle}>
-                    Вместе с тайским написанием и двумя вариантами произношения
+                    Вместе с двумя вариантами произношения
                   </Text>
                 </View>
               )}
@@ -718,9 +712,6 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 18,
   },
-  resultSection: {
-    gap: 7,
-  },
   resultLabel: {
     color: '#75879a',
     fontSize: 11,
@@ -728,17 +719,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  thaiText: {
-    color: '#1359ad',
-    fontSize: 24,
-    fontWeight: '600',
-    lineHeight: 36,
-  },
   pronunciationRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginTop: 18,
   },
   pronunciationItem: {
     backgroundColor: '#f0f6fd',
