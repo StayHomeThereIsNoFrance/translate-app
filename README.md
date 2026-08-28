@@ -62,6 +62,10 @@ API, installs it as an update on the online `SM-S906*` Galaxy S22+, and opens it
 pnpm deploy:android:s22
 ```
 
+Keep the phone unlocked during installation. Google Play Protect can require a
+one-time confirmation for a locally signed preview APK; approve **Install
+anyway** on the phone. The script does not disable or bypass this protection.
+
 The physical-device E2E starts from cleared app state, authenticates without
 storing the production PIN in the repository, translates `Спасибо` in Thai
 formal mode as a male speaker, checks `ขอบคุณครับ`, and confirms both

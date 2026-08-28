@@ -12,8 +12,8 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:44Z) Added and shell-validated the S22+ pairing, discovery, build, install, and launch script plus root package commands; confirmed that missing device and missing PIN paths fail with actionable messages.
 - [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with production PIN authentication and explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
 - [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, production-PIN handling, phrase E2E acceptance, and recovery guidance.
-- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it.
-- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 44 unit tests, production arm64 APK build/inspection; remaining: physical deploy/E2E evidence and final branch push).
+- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, built/installed/launched version 1.1.0 over Wi-Fi; remaining: clean-state phrase E2E requires the production access PIN).
+- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 44 unit tests, production arm64 APK build/inspection, physical deploy; remaining: physical E2E evidence and final branch push).
 
 ## Surprises & Discoveries
 
@@ -37,6 +37,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 - Observation: The default Android Studio JDK path contains a space, so invoking `$JAVA_HOME/bin/java` without quoting the complete executable path made the first automatic deploy fail its Java 17 check before building or touching the phone.
   Evidence: `pnpm deploy:android:s22` stopped with `JAVA_HOME must point to JDK 17`; quoting `"$JAVA_HOME/bin/java"` makes the same check resolve Android Studio's OpenJDK 17 correctly.
+
+- Observation: The first ADB installation paused after transferring the APK because the locked phone had opened a Google Play Protect confirmation under the lock screen.
+  Evidence: `dumpsys window` reported `com.google.android.finsky.protectdialogs.activity.PlayProtectDialogsActivity`; after the user unlocked and approved the locally signed preview, ADB returned `Success` and launched `.MainActivity`.
 
 ## Decision Log
 
@@ -62,7 +65,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 ## Outcomes & Retrospective
 
-Repository-side automation and documentation are implemented. Shell and Maestro syntax checks, lint, type checking, all 44 unit tests, and the production arm64 APK build pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Physical-device pairing, installation, and phrase E2E remain pending because Wireless debugging is not yet enabled or paired on the user's S22+.
+Repository-side automation and documentation are implemented. Shell and Maestro syntax checks, lint, type checking, all 44 unit tests, and the production arm64 APK build pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment now work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. The clean-state phrase E2E remains pending only because it must authenticate with the production access PIN.
 
 ## Context and Orientation
 
@@ -174,9 +177,18 @@ Validated APK evidence:
     min/target SDK: 24/36
     ABI: arm64-v8a
     signature: APK Signature Scheme v2 verified
-    SHA-256: 0c0d11ff23155dbec045c192ebea68526773a6e7fad5242489e199ae9c84b972
+    SHA-256 of the installed build: 5c7adba8eda79d5cf79e82464f3033b27c68d330d94d843ab94983e13d122da6
 
 Repository verification before physical pairing passed 5 contract, 22 API, and 17 client unit tests, for 44 total tests. The first clean Android build completed in 8 minutes 33 seconds; the corrected production-mode Gradle rerun completed successfully without the `NODE_ENV` warning.
+
+Physical deployment evidence:
+
+    device: adb-RFCT60EX4DB-c8dtcQ._adb-tls-connect._tcp
+    model: SM-S906E
+    connection: authenticated wireless ADB at 192.168.1.6
+    install result: Success
+    installed version: 1.1.0 (versionCode 2), arm64-v8a
+    launched activity: xyz.autismstaking.thaitranslate/.MainActivity
 
 The production Android API origin embedded during deployment is:
 
@@ -203,3 +215,5 @@ Revision note (2026-08-28 16:01Z): Added pre-device validation evidence and APK 
 Revision note (2026-08-28 16:08Z): Recorded successful pairing and hardened the automation to prefer Android SDK ADB 37 after Homebrew ADB 36 failed against the reachable phone. Changed model discovery to the canonical device property because ADB normalizes the Samsung model punctuation in its listing.
 
 Revision note (2026-08-28 16:10Z): Recorded and fixed the first deploy preflight failure caused by the space in Android Studio's JDK path. No build, installation, or phone mutation occurred before the corrected retry.
+
+Revision note (2026-08-28 16:18Z): Recorded successful one-command build, wireless installation, and launch on the paired `SM-S906E`, including the one-time Google Play Protect confirmation. The only remaining physical check is the production-authenticated phrase E2E.
