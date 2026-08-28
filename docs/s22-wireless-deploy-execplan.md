@@ -10,7 +10,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 - [x] (2026-08-28 15:39Z) Inspected the Expo build, Android package, existing Maestro flow, Android SDK/JDK/ADB/Maestro tools, repository instructions, and Expo SDK 57 configuration and local-build documentation; created branch `codex/s22-wireless-deploy`.
 - [x] (2026-08-28 15:44Z) Added and shell-validated the S22+ pairing, discovery, build, install, and launch script plus root package commands; confirmed that missing device and missing PIN paths fail with actionable messages.
-- [ ] Make the Maestro phrase flow explicitly runnable against the selected S22+ and document its production PIN requirement.
+- [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with production PIN authentication and explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
 - [ ] Update the repository test plan and operator documentation with one-time phone setup, automatic deploy, E2E, failure recovery, and expected results.
 - [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it.
 - [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval.
@@ -57,7 +57,7 @@ This is a pnpm workspace. `apps/client` is an Expo SDK 57 React Native applicati
 
 ADB, the Android Debug Bridge, is the Android SDK command-line service that pairs with the phone, installs APK files, launches activities, and exposes the phone to test tools. Wireless debugging is Android's authenticated ADB-over-Wi-Fi mode. Pairing is the one-time trust exchange made with the IP address, pairing port, and six-digit code shown on the phone. After pairing, the phone publishes a separate connection endpoint; modern ADB usually connects to it automatically through multicast DNS, abbreviated mDNS. If automatic discovery fails, the phone's main Wireless debugging screen shows the IP address and connection port for an explicit `adb connect` command.
 
-Maestro is the existing Android UI automation tool. `.maestro/translate.yml` launches the installed application, enters `Спасибо`, requests a translation, and checks the Thai result and pronunciations. The production API is protected by a shared PIN. A clean-state E2E run must receive that PIN through the untracked `APP_ACCESS_PIN` process environment; it must never be committed or printed by repository scripts.
+Maestro is the existing Android UI automation tool. `.maestro/translate.yml` is the existing emulator flow. `.maestro/translate-s22.yml` is the physical-phone flow: it launches the installed application, enters `Спасибо`, authenticates against production, requests a translation, and checks the Thai result plus the presence of both pronunciation sections. The production API is protected by a shared PIN. A clean-state E2E run must receive that PIN through the untracked `APP_ACCESS_PIN` process environment; it must never be committed or printed by repository scripts.
 
 The repository instructions require feature work on a separate branch with milestone commits. No client UI changes are needed, so Coolify browser UI deployment is outside this work. The default branch is `main`; this branch must remain unmerged until the user approves it.
 
@@ -67,7 +67,7 @@ First, create `scripts/android-s22.sh` as the single implementation point for de
 
 The deploy action will set a non-secret default `EXPO_PUBLIC_API_BASE_URL`, run the existing arm64 release build under the repository's Node 24, Android SDK 36, and JDK 17 requirements, verify that the APK exists, install it with `adb install -r`, stop any old process, and launch the package's launcher activity. It will not clear application data, so a user's stored preferences and Android bearer session survive normal deployments. Root package commands will expose the actions without requiring callers to remember script paths.
 
-Second, revise `.maestro/translate.yml` for a clean and explicit physical-device smoke test. The flow will choose Thai formal and male speaker controls, translate `Спасибо`, handle the production PIN from `APP_ACCESS_PIN`, and assert `ขอบคุณครับ`, `khop khun khrap`, and `кхоп кхун кхрап`. The script's `e2e` action will require the PIN, deploy the current APK, and invoke Maestro with `--device <selected-serial>` so the test cannot drift to an emulator.
+Second, add `.maestro/translate-s22.yml` as a clean and explicit physical-device smoke test without changing the existing deterministic emulator flow. The S22+ flow will choose Thai formal and male speaker controls, translate `Спасибо`, handle the production PIN from `APP_ACCESS_PIN`, assert `ขอบคุณครับ`, and confirm both pronunciation sections are populated. The script's `e2e` action will require the PIN, deploy the current APK, and invoke Maestro with `--device <selected-serial>` so the test cannot drift to an emulator.
 
 Third, update `README.md`, `docs/Architecture.md`, and the test-plan section in `docs/initplan.md`. The documentation will explain the exact Samsung menu path, the distinction between pairing and connection ports, pairing and reconnect commands, automatic deployment, the secret environment requirement for clean-state E2E, expected output, and recovery for `unauthorized`, `offline`, lost Wi-Fi pairing, multiple devices, and install version conflicts.
 
@@ -124,7 +124,7 @@ Before pairing, `pnpm android:s22:status` must explain that no matching online G
 
 After pairing, `pnpm android:s22:status` must display one online target whose model starts with `SM-S906`. `pnpm deploy:android:s22` must produce an arm64 release APK, report `Success` from ADB installation, and leave `xyz.autismstaking.thaitranslate` in the resumed foreground state. Opening the app on the phone must reach the HTTPS production service rather than `10.0.2.2`.
 
-With `APP_ACCESS_PIN` set, `pnpm test:e2e:android:s22` must reinstall the current APK and run Maestro only on that phone. Starting from cleared app state, the flow must authenticate, translate `Спасибо` in Thai formal male mode, display `ขอบคุณครับ`, display the Latin pronunciation `khop khun khrap`, and display the Cyrillic pronunciation `кхоп кхун кхрап`. A wrong PIN, unavailable API, unexpected live model output, or lost device connection must make the command fail rather than report a false pass.
+With `APP_ACCESS_PIN` set, `pnpm test:e2e:android:s22` must reinstall the current APK and run Maestro only on that phone. Starting from cleared app state, the flow must authenticate, translate `Спасибо` in Thai formal male mode, display `ขอบคุณครับ`, and display non-empty Latin and Cyrillic pronunciation sections. A wrong PIN, unavailable API, unexpected live model output, or lost device connection must make the command fail rather than report a false pass.
 
 Repository acceptance also requires lint, type checking, unit tests, and `git diff --check` to succeed. Because no client UI is changed, no Coolify branch UI deployment is needed for this feature.
 
@@ -162,8 +162,10 @@ The production Android API origin embedded during deployment is:
 
 `scripts/android-s22.sh` must be a Bash-compatible executable. Its public interface is `scripts/android-s22.sh <status|pair|connect|deploy|e2e> [endpoint]`. It depends only on Bash, ADB, pnpm, the existing Expo/Gradle build, Java 17, Android SDK 36, and Maestro 2.7.0. Device selection reads the serial and `model:` fields from `adb devices -l`. `ANDROID_DEVICE_SERIAL` selects an explicit online target. `EXPO_PUBLIC_API_BASE_URL` can override the non-secret production default. `APP_ACCESS_PIN` is mandatory only for `e2e` and is passed to Maestro as an environment value.
 
-The root `package.json` must expose `android:s22:status`, `android:s22:pair`, `android:s22:connect`, `deploy:android:s22`, and `test:e2e:android:s22`. The existing package ID and APK output path remain unchanged. `.maestro/translate.yml` remains the phrase-flow source and receives `APP_ACCESS_PIN` from the process, never from a tracked file.
+The root `package.json` must expose `android:s22:status`, `android:s22:pair`, `android:s22:connect`, `deploy:android:s22`, and `test:e2e:android:s22`. The existing package ID and APK output path remain unchanged. `.maestro/translate-s22.yml` is the physical phrase-flow source and receives the PIN through the `MAESTRO_APP_ACCESS_PIN` child-process environment derived from `APP_ACCESS_PIN`, never from a tracked file or command-line argument.
 
 Revision note (2026-08-28 15:39Z): Created the initial self-contained plan after repository, toolchain, network-discovery, and Expo SDK 57 documentation review. It records the production-HTTPS build decision because the native fallback `10.0.2.2` is emulator-specific and cannot serve a standalone physical-phone deployment.
 
 Revision note (2026-08-28 15:44Z): Marked the repository deployment automation milestone complete after shell syntax, help output, root-command wiring, and intentional no-device/no-PIN failures were verified. Recorded Node 26 discovery and the script's automatic Node 24 selection.
+
+Revision note (2026-08-28 15:47Z): Added a separate S22+ production flow so the existing emulator fixture flow remains deterministic. Narrowed live pronunciation acceptance to visible populated sections because the model may use different valid learner-friendly transliterations.

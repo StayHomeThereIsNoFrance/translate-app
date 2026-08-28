@@ -7,7 +7,7 @@ readonly DEFAULT_API_BASE_URL='https://translate.hetz.autismstaking.xyz'
 readonly MODEL_PREFIX='SM-S906'
 readonly REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly APK_PATH="$REPOSITORY_ROOT/apps/client/android/app/build/outputs/apk/release/app-release.apk"
-readonly MAESTRO_FLOW="$REPOSITORY_ROOT/.maestro/translate.yml"
+readonly MAESTRO_FLOW="$REPOSITORY_ROOT/.maestro/translate-s22.yml"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
