@@ -35,6 +35,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: Homebrew ADB 36 could reach the phone's open pairing port but failed the authenticated exchange, while the Android SDK's ADB 37 paired immediately. ADB's long-device listing also renders the hyphen in Samsung model `SM-S906E` as an underscore, even though `ro.product.model` returns the canonical value.
   Evidence: `/opt/homebrew/bin/adb pair` returned `protocol fault (couldn't read status message)` twice. `/Users/j/Library/Android/sdk/platform-tools/adb pair` returned `Successfully paired`, discovered `192.168.1.6:33075`, and `getprop ro.product.model` returned `SM-S906E`.
 
+- Observation: The default Android Studio JDK path contains a space, so invoking `$JAVA_HOME/bin/java` without quoting the complete executable path made the first automatic deploy fail its Java 17 check before building or touching the phone.
+  Evidence: `pnpm deploy:android:s22` stopped with `JAVA_HOME must point to JDK 17`; quoting `"$JAVA_HOME/bin/java"` makes the same check resolve Android Studio's OpenJDK 17 correctly.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -198,3 +201,5 @@ Revision note (2026-08-28 15:59Z): Recorded the successful first arm64 APK build
 Revision note (2026-08-28 16:01Z): Added pre-device validation evidence and APK metadata. The only remaining acceptance work requires the user to enable Wireless debugging for pairing and provide production authentication during the clean-state phrase flow.
 
 Revision note (2026-08-28 16:08Z): Recorded successful pairing and hardened the automation to prefer Android SDK ADB 37 after Homebrew ADB 36 failed against the reachable phone. Changed model discovery to the canonical device property because ADB normalizes the Samsung model punctuation in its listing.
+
+Revision note (2026-08-28 16:10Z): Recorded and fixed the first deploy preflight failure caused by the space in Android Studio's JDK path. No build, installation, or phone mutation occurred before the corrected retry.

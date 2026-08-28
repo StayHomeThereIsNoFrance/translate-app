@@ -144,7 +144,7 @@ configure_android_build_environment() {
   fi
   [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]] ||
     fail 'Java 17 was not found. Set JAVA_HOME to a JDK 17 installation.'
-  [[ "$($JAVA_HOME/bin/java -version 2>&1 | awk -F\" '/version/ { print $2; exit }')" == 17.* ]] ||
+  [[ "$("$JAVA_HOME/bin/java" -version 2>&1 | awk -F\" '/version/ { print $2; exit }')" == 17.* ]] ||
     fail 'JAVA_HOME must point to JDK 17.'
 
   if [[ -z "${ANDROID_HOME:-}" ]]; then
