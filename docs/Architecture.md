@@ -131,8 +131,12 @@ requests same-origin.
 - Expo components use Jest, `jest-expo`, and React Native Testing Library.
 - Playwright runs the complete web translation flow in desktop and mobile
   Chromium against a deterministic API fixture.
-- Maestro installs and drives the Android APK on an emulator, translates
-  `Спасибо`, and verifies Thai text and both pronunciations.
+- The deterministic Maestro flow remains available for an Android emulator.
+  A separate physical-device flow builds and installs the production-API APK
+  over authenticated wireless ADB, explicitly selects the `SM-S906*` Samsung
+  Galaxy S22+, translates `Спасибо` in Thai formal male mode, verifies
+  `ขอบคุณครับ`, and confirms both pronunciation sections are rendered. The
+  production PIN is provided only through the test process environment.
 - A separate live smoke test calls the actual CLIProxyAPI for canonical phrases
   and checks required vocabulary and gender particles without expecting an
   entirely deterministic model sentence.
@@ -140,4 +144,9 @@ requests same-origin.
 The root `pnpm verify` command runs lint, TypeScript checks, 39 unit tests,
 six desktop/mobile Playwright scenarios, and both production builds. Android
 Maestro and the live provider smoke test are explicit commands because they
-require an emulator and a provider credential.
+require an Android target and a provider credential. The S22+ workflow uses
+`pnpm deploy:android:s22` for build/install/launch and
+`pnpm test:e2e:android:s22` for the clean-state phrase test. One-time pairing is
+performed with `pnpm android:s22:pair -- HOST:PAIR_PORT`; ADB normally remembers
+that trust relationship and reconnects through mDNS while both devices remain
+on the same Wi-Fi network.

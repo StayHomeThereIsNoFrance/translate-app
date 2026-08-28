@@ -11,7 +11,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:39Z) Inspected the Expo build, Android package, existing Maestro flow, Android SDK/JDK/ADB/Maestro tools, repository instructions, and Expo SDK 57 configuration and local-build documentation; created branch `codex/s22-wireless-deploy`.
 - [x] (2026-08-28 15:44Z) Added and shell-validated the S22+ pairing, discovery, build, install, and launch script plus root package commands; confirmed that missing device and missing PIN paths fail with actionable messages.
 - [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with production PIN authentication and explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
-- [ ] Update the repository test plan and operator documentation with one-time phone setup, automatic deploy, E2E, failure recovery, and expected results.
+- [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, production-PIN handling, phrase E2E acceptance, and recovery guidance.
 - [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it.
 - [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval.
 
@@ -169,3 +169,5 @@ Revision note (2026-08-28 15:39Z): Created the initial self-contained plan after
 Revision note (2026-08-28 15:44Z): Marked the repository deployment automation milestone complete after shell syntax, help output, root-command wiring, and intentional no-device/no-PIN failures were verified. Recorded Node 26 discovery and the script's automatic Node 24 selection.
 
 Revision note (2026-08-28 15:47Z): Added a separate S22+ production flow so the existing emulator fixture flow remains deterministic. Narrowed live pronunciation acceptance to visible populated sections because the model may use different valid learner-friendly transliterations.
+
+Revision note (2026-08-28 15:49Z): Marked documentation complete after adding the physical S22+ phrase test to `docs/initplan.md` and documenting pairing, deploy, test, target selection, secret handling, and recovery in the root guide and architecture.
