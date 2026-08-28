@@ -22,38 +22,17 @@ describe('loadConfig', () => {
       reasoningEffort: 'none',
       corsOrigins: ['https://one.test', 'https://two.test'],
     });
-    expect(config.sessionSecret.length).toBeGreaterThanOrEqual(32);
   });
 
-  it('requires access and session secrets in production', () => {
-    expect(() =>
-      loadConfig({
-        NODE_ENV: 'production',
-        CLIPROXYAPI_API_KEY: key,
-      }),
-    ).toThrow('APP_ACCESS_PIN');
-
-    expect(() =>
-      loadConfig({
-        NODE_ENV: 'production',
-        CLIPROXYAPI_API_KEY: key,
-        APP_ACCESS_PIN: '2468',
-      }),
-    ).toThrow('SESSION_SECRET');
-  });
-
-  it('accepts explicit production paths and secrets', () => {
+  it('accepts production paths without access credentials', () => {
     const config = loadConfig({
       NODE_ENV: 'production',
       CLIPROXYAPI_API_KEY: key,
-      APP_ACCESS_PIN: '2468',
-      SESSION_SECRET: 's'.repeat(40),
       PROMPTS_DIR: './config/prompts',
       STATIC_DIR: './apps/client/dist',
     });
 
-    expect(config.accessPin).toBe('2468');
-    expect(config.sessionSecret).toBe('s'.repeat(40));
+    expect(config.nodeEnv).toBe('production');
     expect(config.promptsDir).toMatch(/config\/prompts$/);
     expect(config.staticDir).toMatch(/apps\/client\/dist$/);
   });

@@ -60,7 +60,6 @@ const config: AppConfig = {
   model: 'gpt-5.6-terra',
   reasoningEffort: 'none',
   timeoutMs: 5000,
-  sessionSecret: 'e2e-session-secret-000000000000000000000000',
   corsOrigins: ['http://127.0.0.1:3000', 'http://localhost:3000'],
   staticDir: resolve(process.cwd(), '../../apps/client/dist'),
 };

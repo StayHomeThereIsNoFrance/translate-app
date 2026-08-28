@@ -9,7 +9,6 @@ export const testConfig: AppConfig = {
   model: 'gpt-5.6-terra',
   reasoningEffort: 'none',
   timeoutMs: 5000,
-  sessionSecret: 'test-session-secret-0000000000000000000000',
   corsOrigins: ['http://localhost:8081'],
   promptsDir: new URL('../../../config/prompts', import.meta.url).pathname,
 };

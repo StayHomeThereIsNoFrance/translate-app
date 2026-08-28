@@ -1,10 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
-import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import {
@@ -23,27 +20,11 @@ import {
   type TranslationService,
 } from './translator.js';
 
-declare module '@fastify/jwt' {
-  interface FastifyJWT {
-    payload: { sub: 'translator-user' };
-    user: { sub: 'translator-user' };
-  }
-}
-
 type BuildAppOptions = {
   config: AppConfig;
   translator: TranslationService;
   logger?: boolean;
 };
-
-function constantTimeMatch(actual: string, expected: string): boolean {
-  const actualBuffer = Buffer.from(actual);
-  const expectedBuffer = Buffer.from(expected);
-  return (
-    actualBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(actualBuffer, expectedBuffer)
-  );
-}
 
 function apiError(
   reply: FastifyReply,
@@ -69,16 +50,7 @@ export async function buildApp({
     trustProxy: true,
   });
 
-  await app.register(cookie);
-  await app.register(jwt, {
-    secret: config.sessionSecret,
-    cookie: {
-      cookieName: 'thai_translate_session',
-      signed: false,
-    },
-  });
   await app.register(cors, {
-    credentials: true,
     origin(origin, callback) {
       if (!origin || config.corsOrigins.includes(origin)) {
         callback(null, true);
@@ -92,58 +64,14 @@ export async function buildApp({
     keyGenerator: (request) => request.ip,
   });
 
-  async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-    if (!config.accessPin) {
-      return;
-    }
-    try {
-      await request.jwtVerify();
-    } catch {
-      return apiError(reply, request, 401, 'AUTH_REQUIRED', 'Введите PIN для доступа');
-    }
-  }
-
   app.get('/healthz', async () => ({
     status: 'ok',
     model: config.model,
   }));
 
   app.post(
-    '/api/v1/session',
-    {
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
-    },
-    async (request, reply) => {
-      if (!config.accessPin) {
-        return { authRequired: false, token: null, expiresIn: 0 };
-      }
-      const body = request.body as { pin?: unknown };
-      if (
-        typeof body?.pin !== 'string' ||
-        !constantTimeMatch(body.pin, config.accessPin)
-      ) {
-        return apiError(reply, request, 401, 'INVALID_PIN', 'Неверный PIN');
-      }
-
-      const token = await reply.jwtSign(
-        { sub: 'translator-user' },
-        { expiresIn: '30d' },
-      );
-      reply.setCookie('thai_translate_session', token, {
-        path: '/',
-        httpOnly: true,
-        secure: config.nodeEnv === 'production',
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60,
-      });
-      return { authRequired: true, token, expiresIn: 30 * 24 * 60 * 60 };
-    },
-  );
-
-  app.post(
     '/api/v1/translate',
     {
-      preHandler: authenticate,
       config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
     },
     async (request, reply) => {
