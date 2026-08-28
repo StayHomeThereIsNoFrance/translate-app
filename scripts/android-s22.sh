@@ -49,8 +49,7 @@ usage() {
     '' \
     'Optional environment:' \
     '  ANDROID_DEVICE_SERIAL   Select one exact online ADB serial.' \
-    "  EXPO_PUBLIC_API_BASE_URL Override $DEFAULT_API_BASE_URL." \
-    '  APP_ACCESS_PIN          Required by e2e; never written to a file.'
+    "  EXPO_PUBLIC_API_BASE_URL Override $DEFAULT_API_BASE_URL."
 }
 
 require_command() {
@@ -194,14 +193,11 @@ deploy() {
 run_e2e() {
   local serial
 
-  [[ -n "${APP_ACCESS_PIN:-}" ]] ||
-    fail 'APP_ACCESS_PIN is required for the clean-state production E2E flow.'
   require_command maestro
   serial="$(select_s22)"
   build_release_apk
   install_and_launch "$serial"
 
-  export MAESTRO_APP_ACCESS_PIN="$APP_ACCESS_PIN"
   printf 'Running Maestro phrase E2E on %s\n' "$serial"
   maestro --device "$serial" test "$MAESTRO_FLOW"
 }

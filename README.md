@@ -66,16 +66,12 @@ Keep the phone unlocked during installation. Google Play Protect can require a
 one-time confirmation for a locally signed preview APK; approve **Install
 anyway** on the phone. The script does not disable or bypass this protection.
 
-The physical-device E2E starts from cleared app state, authenticates without
-storing the production PIN in the repository, translates `Спасибо` in Thai
-formal mode as a male speaker, checks `ขอบคุณครับ`, and confirms both
+The physical-device E2E starts from cleared app state, translates `Спасибо` in
+Thai formal mode as a male speaker, checks `ขอบคุณครับ`, and confirms both
 pronunciation sections are visible:
 
 ```bash
-read -s 'APP_ACCESS_PIN?Production access PIN: '
-export APP_ACCESS_PIN
 pnpm test:e2e:android:s22
-unset APP_ACCESS_PIN
 ```
 
 The script refuses to select an emulator or unrelated phone. If multiple S22+

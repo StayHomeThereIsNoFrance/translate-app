@@ -21,13 +21,6 @@ appId: xyz.autismstaking.thaitranslate
     direction: DOWN
 - tapOn:
     id: "translate-button"
-- assertVisible: "Доступ к переводчику"
-- tapOn:
-    id: "pin-input"
-- inputText: ${MAESTRO_APP_ACCESS_PIN}
-- hideKeyboard
-- tapOn:
-    id: "pin-submit"
 - scrollUntilVisible:
     element:
       id: "translation-output"

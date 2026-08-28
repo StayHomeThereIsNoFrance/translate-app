@@ -135,8 +135,7 @@ requests same-origin.
   A separate physical-device flow builds and installs the production-API APK
   over authenticated wireless ADB, explicitly selects the `SM-S906*` Samsung
   Galaxy S22+, translates `Спасибо` in Thai formal male mode, verifies
-  `ขอบคุณครับ`, and confirms both pronunciation sections are rendered. The
-  production PIN is provided only through the test process environment.
+  `ขอบคุณครับ`, and confirms both pronunciation sections are rendered.
 - A separate live smoke test calls the actual CLIProxyAPI for canonical phrases
   and checks required vocabulary and gender particles without expecting an
   entirely deterministic model sentence.
