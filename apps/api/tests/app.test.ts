@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import type {
   ModelTranslation,
   TranslationRequest,
@@ -52,6 +56,34 @@ describe('translation API', () => {
     });
     expect(translate).not.toHaveBeenCalled();
     await app.close();
+  });
+
+  it('serves the installable Android package from the stable download route', async () => {
+    const staticDir = mkdtempSync(join(tmpdir(), 'thai-translate-static-'));
+    const apk = Buffer.from('PK\u0003\u0004test-apk');
+    writeFileSync(join(staticDir, 'thai-ai-translate.apk'), apk);
+    const app = await buildApp({
+      config: { ...testConfig, staticDir },
+      translator: { translate: vi.fn() } as TranslationService,
+      logger: false,
+    });
+
+    try {
+      const response = await app.inject({ method: 'GET', url: '/apk' });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toBe(
+        'application/vnd.android.package-archive',
+      );
+      expect(response.headers['content-disposition']).toBe(
+        'attachment; filename="thai-ai-translate.apk"',
+      );
+      expect(response.headers['cache-control']).toBe('no-cache');
+      expect(response.rawPayload).toEqual(apk);
+    } finally {
+      await app.close();
+      rmSync(staticDir, { recursive: true, force: true });
+    }
   });
 
   it('translates a valid phrase and returns the public contract', async () => {

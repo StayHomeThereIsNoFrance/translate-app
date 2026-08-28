@@ -136,6 +136,16 @@ export async function buildApp({
       prefix: '/',
       decorateReply: true,
     });
+    app.get('/apk', async (_request, reply) =>
+      reply
+        .header('Content-Type', 'application/vnd.android.package-archive')
+        .header(
+          'Content-Disposition',
+          'attachment; filename="thai-ai-translate.apk"',
+        )
+        .header('Cache-Control', 'no-cache')
+        .sendFile('thai-ai-translate.apk', { cacheControl: false }),
+    );
     app.setNotFoundHandler(async (request, reply) => {
       if (request.method === 'GET' && !request.url.startsWith('/api/')) {
         return reply.sendFile('index.html');

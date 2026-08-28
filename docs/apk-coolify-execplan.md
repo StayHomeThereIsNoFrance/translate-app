@@ -10,7 +10,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 
 - [x] (2026-08-28 23:56Z) Created `codex/apk-coolify-download` from the clean `main` branch and inspected repository, Android, Docker, API static-file, and current Coolify application configuration.
 - [x] (2026-08-28 23:56Z) Read the Expo SDK 57 reference and current official Expo Android APK/local-production guidance before designing the implementation.
-- [ ] Add and test the direct APK HTTP route.
+- [x] (2026-08-28 23:59Z) Added and tested the direct APK HTTP route; all 20 API tests and API type checking pass under Node 24.
 - [ ] Add the reusable APK build script and wire the Android toolchain and artifact into the production Docker image.
 - [ ] Document the operator and user workflow, then run repository and container verification.
 - [ ] Push the feature branch, switch the Coolify application to it, deploy through Coolify MCP, and verify the live APK response and artifact integrity.
@@ -25,6 +25,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 
 - Observation: Expo SDK 57 uses Android compile and target SDK 36, while the generated React Native build also needs NDK `27.1.12297006` and local builds use CMake `3.22.1`.
   Evidence: the versioned Expo SDK reference lists compile/target 36; generated Gradle properties report build tools `36.0.0`, compile SDK 36, target SDK 36, and NDK `27.1.12297006`; the validated local SDK contains CMake `3.22.1`.
+
+- Observation: The interactive shell defaults to Node 26 even though this workspace requires Node 24, and `@fastify/static` replaces a custom cache header unless cache-control generation is disabled for that `sendFile` call.
+  Evidence: the first pnpm attempt stopped with `Expected version: >=24 <25, Got: v26.7.0`; the first route test received `public, max-age=0` until `sendFile` was passed `{ cacheControl: false }`. Node 24.18.0 is available at `/opt/homebrew/opt/node@24/bin`.
 
 ## Decision Log
 
@@ -167,3 +170,5 @@ The root `package.json` exposes `build:apk` as `./scripts/build-apk.sh`. The exi
 The Docker Android stage depends on Node 24, pnpm 10.19.0, OpenJDK 17, official Android command-line tools 15859902, platform/build tools 36/36.0.0, NDK 27.1.12297006, and CMake 3.22.1. The final runtime continues to depend only on Node 24 Alpine and curl.
 
 Revision note (2026-08-28 23:56Z): Created the initial self-contained plan after repository inspection, exact Expo SDK 57 documentation review, generated Gradle toolchain inspection, and read-only Coolify MCP discovery. It records the server-side Docker build decision because the Coolify Git build cannot see an ignored local APK and direct non-MCP artifact transfer is prohibited.
+
+Revision note (2026-08-28 23:59Z): Recorded the local Node version mismatch and Fastify static cache-header behavior discovered by the first API test run. The route disables the plugin's generated cache header on that response so the stable download URL can explicitly require revalidation.
