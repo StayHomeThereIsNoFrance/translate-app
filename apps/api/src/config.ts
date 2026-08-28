@@ -13,8 +13,6 @@ const EnvironmentSchema = z.object({
     .enum(['none', 'low', 'medium', 'high', 'xhigh', 'max'])
     .default('none'),
   OPENAI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(45000),
-  APP_ACCESS_PIN: z.string().min(4).optional(),
-  SESSION_SECRET: z.string().min(32).optional(),
   CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:3000'),
   PROMPTS_DIR: z.string().optional(),
   STATIC_DIR: z.string().optional(),
@@ -29,8 +27,6 @@ export type AppConfig = {
   model: string;
   reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
   timeoutMs: number;
-  accessPin?: string;
-  sessionSecret: string;
   corsOrigins: string[];
   promptsDir?: string;
   staticDir?: string;
@@ -38,13 +34,6 @@ export type AppConfig = {
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = EnvironmentSchema.parse(environment);
-
-  if (parsed.NODE_ENV === 'production' && !parsed.APP_ACCESS_PIN) {
-    throw new Error('APP_ACCESS_PIN is required in production');
-  }
-  if (parsed.NODE_ENV === 'production' && !parsed.SESSION_SECRET) {
-    throw new Error('SESSION_SECRET is required in production');
-  }
 
   return {
     nodeEnv: parsed.NODE_ENV,
@@ -55,9 +44,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     model: parsed.OPENAI_MODEL,
     reasoningEffort: parsed.OPENAI_REASONING_EFFORT,
     timeoutMs: parsed.OPENAI_TIMEOUT_MS,
-    accessPin: parsed.APP_ACCESS_PIN,
-    sessionSecret:
-      parsed.SESSION_SECRET ?? 'development-session-secret-change-me-000000000000',
     corsOrigins: parsed.CORS_ORIGINS.split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),

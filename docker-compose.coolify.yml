@@ -10,8 +10,6 @@ services:
       CLIPROXYAPI_API_KEY: "${CLIPROXYAPI_API_KEY:?Set CLIPROXYAPI_API_KEY}"
       OPENAI_MODEL: "${OPENAI_MODEL:-gpt-5.6-terra}"
       OPENAI_REASONING_EFFORT: "${OPENAI_REASONING_EFFORT:-none}"
-      APP_ACCESS_PIN: "${APP_ACCESS_PIN:?Set APP_ACCESS_PIN}"
-      SESSION_SECRET: "${SESSION_SECRET:?Set SESSION_SECRET}"
       CORS_ORIGINS: https://translate.hetz.autismstaking.xyz
     expose:
       - "3000"
