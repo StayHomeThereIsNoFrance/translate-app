@@ -29,6 +29,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: The default shell now resolves Node 26, while this workspace explicitly supports Node 24 only.
   Evidence: `node --version` returned `v26.7.0`; `/opt/homebrew/opt/node@24/bin/node --version` returned `v24.18.0`. The deployment script prepends the installed Node 24 binary and rejects any remaining incompatible runtime.
 
+- Observation: The original Android package command scoped `NODE_ENV=production` only to Expo Prebuild, not to the following Gradle process that creates the JavaScript bundle.
+  Evidence: The first physical-phone APK validation printed `The NODE_ENV environment variable is required but was not specified` from Gradle task `:expo-constants:createExpoConfig`. Adding the environment assignment to the Gradle command removes the split-scope configuration.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -171,3 +174,5 @@ Revision note (2026-08-28 15:44Z): Marked the repository deployment automation m
 Revision note (2026-08-28 15:47Z): Added a separate S22+ production flow so the existing emulator fixture flow remains deterministic. Narrowed live pronunciation acceptance to visible populated sections because the model may use different valid learner-friendly transliterations.
 
 Revision note (2026-08-28 15:49Z): Marked documentation complete after adding the physical S22+ phrase test to `docs/initplan.md` and documenting pairing, deploy, test, target selection, secret handling, and recovery in the root guide and architecture.
+
+Revision note (2026-08-28 15:59Z): Recorded the successful first arm64 APK build and its `NODE_ENV` scope warning. Updated both Android build variants so the Gradle bundling phase is explicitly production-mode as well as the Expo Prebuild phase.
