@@ -9,6 +9,28 @@ readonly REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly APK_PATH="$REPOSITORY_ROOT/apps/client/android/app/build/outputs/apk/release/app-release.apk"
 readonly MAESTRO_FLOW="$REPOSITORY_ROOT/.maestro/translate-s22.yml"
 
+find_adb() {
+  local macos_user_directory
+  local sdk_adb
+
+  if [[ -n "${ANDROID_HOME:-}" ]]; then
+    sdk_adb="$ANDROID_HOME/platform-tools/adb"
+  elif [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+    sdk_adb="$ANDROID_SDK_ROOT/platform-tools/adb"
+  else
+    macos_user_directory="$(dscacheutil -q user -a name "$(id -un)" | awk '/^dir:/ { print $2; exit }')"
+    sdk_adb="$macos_user_directory/Library/Android/sdk/platform-tools/adb"
+  fi
+
+  if [[ -x "$sdk_adb" ]]; then
+    printf '%s\n' "$sdk_adb"
+    return
+  fi
+  command -v adb || true
+}
+
+readonly ADB_BIN="$(find_adb)"
+
 fail() {
   printf 'Error: %s\n' "$*" >&2
   exit 1
@@ -42,7 +64,7 @@ validate_endpoint() {
 }
 
 adb_devices() {
-  adb devices -l
+  "$ADB_BIN" devices -l
 }
 
 device_line() {
@@ -51,18 +73,15 @@ device_line() {
 }
 
 matching_s22_serials() {
-  adb_devices | awk -v prefix="$MODEL_PREFIX" '
-    $2 == "device" {
-      for (field_index = 3; field_index <= NF; field_index += 1) {
-        if ($field_index ~ /^model:/) {
-          model = substr($field_index, 7)
-          if (index(model, prefix) == 1) {
-            print $1
-          }
-        }
-      }
-    }
-  '
+  local model
+  local serial
+
+  adb_devices | awk '$2 == "device" { print $1 }' | while read -r serial; do
+    model="$("$ADB_BIN" -s "$serial" shell getprop ro.product.model 2>/dev/null | tr -d '\r' || true)"
+    if [[ "$model" == "$MODEL_PREFIX"* ]]; then
+      printf '%s\n' "$serial"
+    fi
+  done
 }
 
 select_s22() {
@@ -103,7 +122,7 @@ show_status() {
   adb_devices
   printf '\n'
   serial="$(select_s22)"
-  model="$(adb -s "$serial" shell getprop ro.product.model | tr -d '\r')"
+  model="$("$ADB_BIN" -s "$serial" shell getprop ro.product.model | tr -d '\r')"
   printf 'Selected Galaxy S22+: %s (model %s)\n' "$serial" "$model"
 }
 
@@ -158,9 +177,9 @@ install_and_launch() {
   local serial="$1"
 
   printf 'Installing %s on %s\n' "$APK_PATH" "$serial"
-  adb -s "$serial" install -r --no-streaming "$APK_PATH"
-  adb -s "$serial" shell am force-stop "$APP_ID"
-  adb -s "$serial" shell am start -W -n "$APP_ID/.MainActivity"
+  "$ADB_BIN" -s "$serial" install -r --no-streaming "$APK_PATH"
+  "$ADB_BIN" -s "$serial" shell am force-stop "$APP_ID"
+  "$ADB_BIN" -s "$serial" shell am start -W -n "$APP_ID/.MainActivity"
   printf 'Launched %s on %s\n' "$APP_ID" "$serial"
 }
 
@@ -191,8 +210,8 @@ main() {
   local command="${1:-}"
   local endpoint="${2:-}"
 
-  require_command adb
-  adb start-server >/dev/null
+  [[ -n "$ADB_BIN" && -x "$ADB_BIN" ]] || fail 'ADB is not installed or not on PATH.'
+  "$ADB_BIN" start-server >/dev/null
 
   case "$command" in
     status)
@@ -203,13 +222,13 @@ main() {
       [[ $# -eq 2 ]] || fail 'pair requires HOST:PAIR_PORT.'
       validate_endpoint "$endpoint"
       printf 'Enter the six-digit code shown by Pair device with pairing code.\n'
-      adb pair "$endpoint"
+      "$ADB_BIN" pair "$endpoint"
       printf 'Pairing completed. If status cannot see the phone, run connect with the port from the main Wireless debugging screen.\n'
       ;;
     connect)
       [[ $# -eq 2 ]] || fail 'connect requires HOST:CONNECTION_PORT.'
       validate_endpoint "$endpoint"
-      adb connect "$endpoint"
+      "$ADB_BIN" connect "$endpoint"
       show_status
       ;;
     deploy)

@@ -32,6 +32,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: The original Android package command scoped `NODE_ENV=production` only to Expo Prebuild, not to the following Gradle process that creates the JavaScript bundle.
   Evidence: The first physical-phone APK validation printed `The NODE_ENV environment variable is required but was not specified` from Gradle task `:expo-constants:createExpoConfig`. Adding the environment assignment to the Gradle command removes the split-scope configuration.
 
+- Observation: Homebrew ADB 36 could reach the phone's open pairing port but failed the authenticated exchange, while the Android SDK's ADB 37 paired immediately. ADB's long-device listing also renders the hyphen in Samsung model `SM-S906E` as an underscore, even though `ro.product.model` returns the canonical value.
+  Evidence: `/opt/homebrew/bin/adb pair` returned `protocol fault (couldn't read status message)` twice. `/Users/j/Library/Android/sdk/platform-tools/adb pair` returned `Successfully paired`, discovered `192.168.1.6:33075`, and `getprop ro.product.model` returned `SM-S906E`.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -40,6 +43,10 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 - Decision: Select the target by the Galaxy S22+ model family `SM-S906*`, while allowing an explicit `ANDROID_DEVICE_SERIAL` override.
   Rationale: A model check prevents silently deploying to an emulator or unrelated phone. The serial override makes recovery possible if Samsung or ADB reports an unexpected model string, without weakening the safe default.
+  Date/Author: 2026-08-28 / Codex
+
+- Decision: Prefer the ADB executable installed inside the configured Android SDK over another `adb` earlier on `PATH`, and identify the model with `ro.product.model`.
+  Rationale: The Android SDK is the build toolchain already required by this repository and contains the working ADB 37 pairing implementation. Querying the property avoids ADB's underscore normalization in `devices -l` while still safely selecting only the S22+.
   Date/Author: 2026-08-28 / Codex
 
 - Decision: Build the installed preview with `EXPO_PUBLIC_API_BASE_URL=https://translate.hetz.autismstaking.xyz` unless the caller explicitly provides another URL.
@@ -189,3 +196,5 @@ Revision note (2026-08-28 15:49Z): Marked documentation complete after adding th
 Revision note (2026-08-28 15:59Z): Recorded the successful first arm64 APK build and its `NODE_ENV` scope warning. Updated both Android build variants so the Gradle bundling phase is explicitly production-mode as well as the Expo Prebuild phase.
 
 Revision note (2026-08-28 16:01Z): Added pre-device validation evidence and APK metadata. The only remaining acceptance work requires the user to enable Wireless debugging for pairing and provide production authentication during the clean-state phrase flow.
+
+Revision note (2026-08-28 16:08Z): Recorded successful pairing and hardened the automation to prefer Android SDK ADB 37 after Homebrew ADB 36 failed against the reachable phone. Changed model discovery to the canonical device property because ADB normalizes the Samsung model punctuation in its listing.
