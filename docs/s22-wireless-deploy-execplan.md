@@ -14,8 +14,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, phrase E2E acceptance, and recovery guidance.
 - [x] (2026-08-29) Removed the discovered PIN/session mechanism from the API and client, including JWT, cookie, bearer-token, SecureStore, production-secret configuration, UI, tests, and dependencies; verified 19 API tests and 12 client tests.
 - [x] (2026-08-29) Made the physical E2E keep the phone awake for the bounded run and restore its original 30-second timeout on exit; a full build/install retry proved both the keep-awake behavior and restoration.
-- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, repeatedly built/installed/launched version 1.1.0 over Wi-Fi; remaining: deploy the authentication-free API to Coolify and rerun the phrase flow).
-- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, API/client lint, type checking and unit tests, production arm64 APK build/inspection, physical deploy; remaining: full repository validation, Coolify branch verification, physical E2E evidence, and final branch push).
+- [x] (2026-08-29) Pushed commit `5239fca`, switched Coolify to `codex/s22-wireless-deploy`, removed the obsolete production/preview authentication secrets, and verified healthy deployment `fufx8rz06pjgr5b6hpevsm3b` plus a live browser translation without a PIN dialog.
+- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, repeatedly built/installed/launched version 1.1.0 over Wi-Fi, and deployed the authentication-free production API; remaining: unlock the system screen and run the final phrase flow).
+- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 36 unit tests, production web/API builds, production arm64 APK build/inspection, Coolify QA, and physical deploy; remaining: physical E2E evidence and final plan push).
 
 ## Surprises & Discoveries
 
@@ -52,6 +53,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: The application opens without credentials, but the first production translation returned 401 and opened a PIN dialog; the access control was therefore real but deferred until API use.
   Evidence: After keep-awake made the E2E reach the translation button, its final hierarchy contained `Доступ к переводчику`, `Введите PIN, заданный для production-сервиса.`, and the PIN input instead of `translation-output`.
 
+- Observation: The local `pnpm verify` reached Playwright only after lint, type checking, all 36 unit tests, and a successful web export, then stopped because Playwright's updated Chromium binary was not installed on this Mac.
+  Evidence: All preceding commands passed; all six browser cases failed at launch with `Executable doesn't exist ... chromium_headless_shell-1234`. Per repository policy, deployed UI verification was performed through Coolify instead of installing and opening another local browser build.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -84,7 +88,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 ## Outcomes & Retrospective
 
-Repository-side automation and the authentication-free application changes are implemented. API type checking and all 19 API tests pass; client lint, type checking, and all 12 client tests pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. Final full validation, Coolify deployment of the authentication-free API, and the clean-state phrase E2E remain pending.
+Repository-side automation and the authentication-free application changes are implemented. Lint, type checking, all 36 unit tests, and production web/API builds pass. Coolify is healthy on commit `5239fca`; a deployed browser translated `Спасибо` to `ขอบคุณครับ` through a 200 API response, rendered both pronunciation sections, and showed no PIN UI. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. Only the final clean-state phone flow remains, currently waiting for the Android system screen to be unlocked.
 
 ## Context and Orientation
 
@@ -197,6 +201,8 @@ Validated APK evidence:
 
 Repository verification before physical pairing passed 5 contract, 22 API, and 17 client unit tests, for 44 total tests. The first clean Android build completed in 8 minutes 33 seconds; the corrected production-mode Gradle rerun completed successfully without the `NODE_ENV` warning.
 
+After authentication removal, repository verification passes 5 contract, 19 API, and 12 client unit tests, for 36 total tests. Production web and API builds pass. The automated Playwright stage could not launch because its new Chromium binary is absent locally; deployed Coolify QA instead confirmed the real browser flow.
+
 Physical deployment evidence:
 
     device: adb-RFCT60EX4DB-c8dtcQ._adb-tls-connect._tcp
@@ -209,6 +215,15 @@ Physical deployment evidence:
 The production Android API origin embedded during deployment is:
 
     https://translate.hetz.autismstaking.xyz
+
+Coolify authentication-free deployment evidence:
+
+    application: ek2k3scxtyw65x3a6csxs0tu (running:healthy)
+    branch: codex/s22-wireless-deploy
+    commit: 5239fca7bfd3bb1ca39084afb0723f9a9b51e72b
+    deployment: fufx8rz06pjgr5b6hpevsm3b (finished in 113 seconds)
+    live translation HTTP status: 200
+    observed output: ขอบคุณครับ with Latin and Cyrillic pronunciation sections
 
 ## Interfaces and Dependencies
 
@@ -239,3 +254,5 @@ Revision note (2026-08-29): Removed the access-code assumption from the S22+ flo
 Revision note (2026-08-29): Hardened the E2E command after an unlocked retry slept during Maestro initialization. The command now keeps the screen awake for the bounded run and restores the user's prior timeout even when the test fails.
 
 Revision note (2026-08-29): The keep-awake retry exposed the production API's deferred PIN prompt. Expanded the plan per the user's direction to remove authentication from the API and client, validate the revised stack, deploy the branch through Coolify, and only then rerun the production-backed S22+ flow.
+
+Revision note (2026-08-29): Recorded the healthy Coolify branch deployment, deletion of obsolete authentication environment variables, and successful production browser translation without PIN UI. Also recorded the non-code Playwright browser-install limitation and the final phone-lock preflight awaiting one system unlock.
