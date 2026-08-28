@@ -22,11 +22,10 @@
 - `Farang - Ploy` создаёт живой, тёплый, разговорный стиль без добавления флирта или интимного смысла, отсутствующего в оригинале. `Thai formal` создаёт уважительный нейтральный текст для незнакомых, старших и делового общения.
 - Полные системные промпты хранить только в `config/prompts/farang-ploy.md` и `config/prompts/thai-formal.md`; сервер загружает и валидирует их при старте. Изменения применяются после рестарта/деплоя. Просмотр и редактирование промптов через UI не добавлять.
 - Публичный контракт:
-  - `POST /api/v1/session` — проверка общего PIN и выдача сессии;
   - `POST /api/v1/translate` принимает `{ text, sourceLanguage, targetLanguage, mode, speakerGender }`;
   - ответ: `{ translation, thaiText, pronunciation: { latin, russian }, requestId }`;
   - `GET /healthz` — проверка процесса.
-- Ограничить текст 2000 символами, разрешить только пары с тайским на одной стороне, добавить rate limit, CORS для локальной разработки, безопасные cookie для web и bearer-токен в SecureStore для Android. В production API не запускается без `APP_ACCESS_PIN` и `SESSION_SECRET`.
+- Ограничить текст 2000 символами, разрешить только пары с тайским на одной стороне, добавить IP-based rate limit и CORS для локальной разработки. Web использует same-origin production API, Android обращается к тому же HTTPS API напрямую, без PIN и сессии.
 - Использовать `gpt-5.6-terra`, `reasoning: none`, `store: false` и строгий JSON Schema; результат дополнительно проверять Zod. Модель и effort остаются настраиваемыми через env.
 - Локальный Docker Compose подключает API к внешней сети `agent-docker_agent-internal`. Для production создать отдельный проект `thai-ai-translate` в Coolify и подключить его к сети `coolify`, где уже находится `cliproxyapi`. Сайт и API обслуживаются одним контейнером и одним origin.
 - Описать компоненты, API, поток данных, безопасность, промпты, Docker/Coolify и тестовую стратегию в `docs/Architecture.md`.

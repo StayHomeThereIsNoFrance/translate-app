@@ -12,8 +12,10 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - [x] (2026-08-28 15:44Z) Added and shell-validated the S22+ pairing, discovery, build, install, and launch script plus root package commands; confirmed that missing-device paths fail with actionable messages.
 - [x] (2026-08-28 15:47Z) Added and syntax-checked a separate clean-state S22+ Maestro flow with explicit phrase/result/pronunciation checks; kept the existing emulator fixture flow unchanged.
 - [x] (2026-08-28 15:49Z) Updated the root operator guide, architecture verification section, and original test plan with one-time wireless pairing, automatic S22+ deployment, phrase E2E acceptance, and recovery guidance.
-- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, built/installed/launched version 1.1.0 over Wi-Fi; remaining: rerun the clean-state phrase E2E while the phone is unlocked).
-- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, lint, type checking, 44 unit tests, production arm64 APK build/inspection, physical deploy; remaining: physical E2E evidence and final branch push).
+- [x] (2026-08-29) Removed the discovered PIN/session mechanism from the API and client, including JWT, cookie, bearer-token, SecureStore, production-secret configuration, UI, tests, and dependencies; verified 19 API tests and 12 client tests.
+- [x] (2026-08-29) Made the physical E2E keep the phone awake for the bounded run and restore its original 30-second timeout on exit; a full build/install retry proved both the keep-awake behavior and restoration.
+- [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it (completed: paired `SM-S906E`, repeatedly built/installed/launched version 1.1.0 over Wi-Fi; remaining: deploy the authentication-free API to Coolify and rerun the phrase flow).
+- [ ] Run repository validation, record evidence here, commit each completed milestone, and leave the feature branch unmerged pending user approval (completed: shell and Maestro syntax, API/client lint, type checking and unit tests, production arm64 APK build/inspection, physical deploy; remaining: full repository validation, Coolify branch verification, physical E2E evidence, and final branch push).
 
 ## Surprises & Discoveries
 
@@ -47,6 +49,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: Even when the phone was unlocked immediately before the retry, its short screen timeout elapsed while Maestro initialized its Android driver.
   Evidence: The preflight reported `showing=false` and `SCREEN_STATE_ON`; by the first title assertion Android again reported `showing=true`, `SCREEN_STATE_OFF`, and `NotificationShade` above the still-focused application.
 
+- Observation: The application opens without credentials, but the first production translation returned 401 and opened a PIN dialog; the access control was therefore real but deferred until API use.
+  Evidence: After keep-awake made the E2E reach the translation button, its final hierarchy contained `Доступ к переводчику`, `Введите PIN, заданный для production-сервиса.`, and the PIN input instead of `translation-output`.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -70,7 +75,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
   Date/Author: 2026-08-28 / Codex
 
 - Decision: Exercise the production translation directly, without an access-code step or secret environment variable.
-  Rationale: The deployed application is available without an access-code prompt, so the physical-device flow should model the real user journey and remain runnable as one command.
+  Rationale: The user explicitly requires an application without PIN access. Removing the deferred API authentication makes the physical-device flow model that intended journey and keeps it runnable as one command.
   Date/Author: 2026-08-29 / Codex
 
 - Decision: Temporarily extend the phone's screen timeout to ten minutes for the E2E command and restore the original value from an exit trap.
@@ -79,7 +84,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 ## Outcomes & Retrospective
 
-Repository-side automation and documentation are implemented. Shell and Maestro syntax checks, lint, type checking, all 44 unit tests, and the production arm64 APK build pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment now work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. The clean-state phrase E2E now follows the direct translation journey and remains to be rerun while the phone is unlocked.
+Repository-side automation and the authentication-free application changes are implemented. API type checking and all 19 API tests pass; client lint, type checking, and all 12 client tests pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. Final full validation, Coolify deployment of the authentication-free API, and the clean-state phrase E2E remain pending.
 
 ## Context and Orientation
 
@@ -89,19 +94,19 @@ ADB, the Android Debug Bridge, is the Android SDK command-line service that pair
 
 Maestro is the existing Android UI automation tool. `.maestro/translate.yml` is the existing emulator flow. `.maestro/translate-s22.yml` is the physical-phone flow: it launches the installed application, enters `Спасибо`, requests a translation directly, and checks the Thai result plus the presence of both pronunciation sections.
 
-The repository instructions require feature work on a separate branch with milestone commits. No client UI changes are needed, so Coolify browser UI deployment is outside this work. The default branch is `main`; this branch must remain unmerged until the user approves it.
+The repository instructions require feature work on a separate branch with milestone commits. Removing the PIN changes both the client UI and API, so the branch must be pushed and deployed through Coolify before production and physical-phone verification. The default branch is `main`; this branch must remain unmerged until the user approves it.
 
 ## Plan of Work
 
 First, create `scripts/android-s22.sh` as the single implementation point for device operations. It will provide `status`, `pair`, `connect`, `deploy`, and `e2e` actions. Every action that operates on a device will query `adb devices -l`, accept only a fully authorized target whose model begins with `SM-S906`, reject ambiguity, and honor `ANDROID_DEVICE_SERIAL` only after verifying that the chosen serial is online. `pair` will delegate the six-digit prompt to `adb pair` so the code is not passed as a command argument. `connect` will accept the connection endpoint displayed on the phone.
 
-The deploy action will set a non-secret default `EXPO_PUBLIC_API_BASE_URL`, run the existing arm64 release build under the repository's Node 24, Android SDK 36, and JDK 17 requirements, verify that the APK exists, install it with `adb install -r`, stop any old process, and launch the package's launcher activity. It will not clear application data, so a user's stored preferences and Android bearer session survive normal deployments. Root package commands will expose the actions without requiring callers to remember script paths.
+The deploy action will set a non-secret default `EXPO_PUBLIC_API_BASE_URL`, run the existing arm64 release build under the repository's Node 24, Android SDK 36, and JDK 17 requirements, verify that the APK exists, install it with `adb install -r`, stop any old process, and launch the package's launcher activity. It will not clear application data, so a user's stored preferences survive normal deployments. Root package commands will expose the actions without requiring callers to remember script paths.
 
 Second, add `.maestro/translate-s22.yml` as a clean and explicit physical-device smoke test without changing the existing deterministic emulator flow. The S22+ flow will choose Thai formal and male speaker controls, translate `Спасибо` directly, assert `ขอบคุณครับ`, and confirm both pronunciation sections are populated. The script's `e2e` action will verify that the phone is unlocked, temporarily extend and later restore its screen timeout, deploy the current APK, and invoke Maestro with `--device <selected-serial>` so the test cannot drift to an emulator.
 
-Third, update `README.md`, `docs/Architecture.md`, and the test-plan section in `docs/initplan.md`. The documentation will explain the exact Samsung menu path, the distinction between pairing and connection ports, pairing and reconnect commands, automatic deployment, direct clean-state E2E, expected output, and recovery for `unauthorized`, `offline`, lost Wi-Fi pairing, multiple devices, and install version conflicts.
+Third, update `README.md`, `docs/Architecture.md`, and the test-plan section in `docs/initplan.md`. The documentation will explain the exact Samsung menu path, the distinction between pairing and connection ports, pairing and reconnect commands, automatic deployment, the authentication-free API/client, direct clean-state E2E, expected output, and recovery for `unauthorized`, `offline`, lost Wi-Fi pairing, multiple devices, and install version conflicts.
 
-Finally, validate shell syntax and failure behavior before the phone is available. Run lint, type checking, unit tests, and relevant configuration checks. Ask the user to enable Developer options and Wireless debugging and to provide the short-lived pairing endpoint/code when ready. Pair the phone, confirm the reported model, deploy the release APK, run the phrase E2E, and capture concise evidence in this plan. Commit each milestone independently.
+Finally, validate shell syntax and failure behavior, then run lint, type checking, unit tests, web E2E, and production builds. Push the branch, deploy it through Coolify, and verify the production health and direct translation path. Pair the phone, confirm the reported model, deploy the release APK, run the phrase E2E, and capture concise evidence in this plan. Commit each milestone independently.
 
 ## Concrete Steps
 
@@ -153,11 +158,11 @@ After pairing, `pnpm android:s22:status` must display one online target whose mo
 
 `pnpm test:e2e:android:s22` must reinstall the current APK and run Maestro only on that phone. Starting from cleared app state, the flow must translate `Спасибо` in Thai formal male mode, display `ขอบคุณครับ`, and display non-empty Latin and Cyrillic pronunciation sections. An unavailable API, unexpected live model output, or lost device connection must make the command fail rather than report a false pass.
 
-Repository acceptance also requires lint, type checking, unit tests, and `git diff --check` to succeed. Because no client UI is changed, no Coolify branch UI deployment is needed for this feature.
+Repository acceptance also requires lint, type checking, unit tests, web E2E, production builds, and `git diff --check` to succeed. Because the PIN removal changes both the client UI and API, the feature branch must be deployed and verified through Coolify before the physical production-API E2E.
 
 ## Idempotence and Recovery
 
-Status checks, ADB pairing attempts, explicit connection, release builds, and `adb install -r` are safe to repeat. The `-r` flag updates the installed package while retaining application data during ordinary deploys. The Maestro flow deliberately clears data so the authentication and translation journey starts predictably; this removes only this app's local preferences and token on the test phone.
+Status checks, ADB pairing attempts, explicit connection, release builds, and `adb install -r` are safe to repeat. The `-r` flag updates the installed package while retaining application data during ordinary deploys. The Maestro flow deliberately clears data so the translation journey starts predictably; this removes only this app's local preferences on the test phone.
 
 If the phone is `unauthorized`, accept the trust prompt on the phone or revoke Wireless debugging authorizations and pair again. If it is `offline`, toggle Wireless debugging or run the explicit connection command with the current connection port. If more than one S22+ is online, set `ANDROID_DEVICE_SERIAL` to the exact serial printed by `adb devices -l`. If ADB reports a version downgrade, increment `android.versionCode` only for a real release or manually remove the preview package after confirming with the user that clearing its local data is acceptable; the automation will not uninstall automatically.
 
@@ -232,3 +237,5 @@ Revision note (2026-08-28 16:18Z): Recorded successful one-command build, wirele
 Revision note (2026-08-29): Removed the access-code assumption from the S22+ flow, script, and operator documentation after confirming with the user that the application opens without it. Recorded that the first test retry was blocked only by Android's system keyguard.
 
 Revision note (2026-08-29): Hardened the E2E command after an unlocked retry slept during Maestro initialization. The command now keeps the screen awake for the bounded run and restores the user's prior timeout even when the test fails.
+
+Revision note (2026-08-29): The keep-awake retry exposed the production API's deferred PIN prompt. Expanded the plan per the user's direction to remove authentication from the API and client, validate the revised stack, deploy the branch through Coolify, and only then rerun the production-backed S22+ flow.

@@ -24,8 +24,8 @@ flowchart LR
 - `apps/client` contains the Expo SDK 57 application. The same translator screen,
   API client, preferences, validation types, and interactions run on Android and
   React Native Web.
-- `apps/api` contains authentication, request validation, rate limiting, static
-  web serving, prompt rendering, and the CLIProxyAPI adapter.
+- `apps/api` contains request validation, rate limiting, static web serving,
+  prompt rendering, and the CLIProxyAPI adapter.
 - `packages/contracts` is the shared Zod contract for request and response
   payloads, modes, gender, languages, and length limits.
 - `config/prompts` is the only source of translation prompts. Prompt files are
@@ -56,13 +56,6 @@ No source text or translation is persisted. Application logs contain request
 IDs, status, latency, and provider error category, but not user text or secrets.
 
 ## Public Interfaces
-
-### `POST /api/v1/session`
-
-Accepts `{ "pin": "..." }`. In production, a correct shared PIN returns a
-30-day JWT and sets an HttpOnly, Secure, SameSite=Strict cookie. Android stores
-the returned bearer token in SecureStore. Development can omit `APP_ACCESS_PIN`
-and bypass authentication.
 
 ### `POST /api/v1/translate`
 
@@ -99,18 +92,18 @@ returns credentials.
 
 ## Security and Failure Handling
 
-- `CLIPROXYAPI_API_KEY`, access PIN, and JWT secret are server-only environment
-  values. Expo public environment variables contain only the API origin.
-- Production startup fails if the PIN or a 32-character session secret is
-  missing. Translation and login routes have independent rate limits.
+- `CLIPROXYAPI_API_KEY` is a server-only environment value. Expo public
+  environment variables contain only the API origin.
+- The public translation route has an IP-based rate limit of 20 requests per
+  minute.
 - The web app uses same-origin requests in production. CORS permits only the
-  configured development origins; Android uses bearer authentication.
+  configured development origins; Android calls the same HTTPS API directly.
 - The model receives no tools and is instructed to treat submitted text only as
   translation content. Strict structured output and Zod validation prevent
   arbitrary model output from crossing the API boundary.
-- Validation errors use 400, authentication uses 401, refusal uses 422,
-  provider errors use 502, and timeout uses 504. Public errors never contain
-  upstream credentials or raw provider messages.
+- Validation errors use 400, refusal uses 422, provider errors use 502, and
+  timeout uses 504. Public errors never contain upstream credentials or raw
+  provider messages.
 
 ## Deployment
 
@@ -140,7 +133,7 @@ requests same-origin.
   and checks required vocabulary and gender particles without expecting an
   entirely deterministic model sentence.
 
-The root `pnpm verify` command runs lint, TypeScript checks, 39 unit tests,
+The root `pnpm verify` command runs lint, TypeScript checks, 36 unit tests,
 six desktop/mobile Playwright scenarios, and both production builds. Android
 Maestro and the live provider smoke test are explicit commands because they
 require an Android target and a provider credential. The S22+ workflow uses
