@@ -74,6 +74,11 @@ pronunciation sections are visible:
 pnpm test:e2e:android:s22
 ```
 
+Start the command with the phone unlocked. During the build and test, the
+script temporarily extends the screen timeout to ten minutes and restores the
+previous value when it exits, so Android cannot sleep halfway through Maestro
+startup.
+
 The script refuses to select an emulator or unrelated phone. If multiple S22+
 devices are online, set `ANDROID_DEVICE_SERIAL` to the exact serial printed by
 `adb devices -l`. For `unauthorized` or `offline`, accept the phone prompt,

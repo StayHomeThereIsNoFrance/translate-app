@@ -8,6 +8,10 @@ readonly MODEL_PREFIX='SM-S906'
 readonly REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly APK_PATH="$REPOSITORY_ROOT/apps/client/android/app/build/outputs/apk/release/app-release.apk"
 readonly MAESTRO_FLOW="$REPOSITORY_ROOT/.maestro/translate-s22.yml"
+readonly E2E_SCREEN_TIMEOUT_MS='600000'
+
+E2E_DEVICE_SERIAL=''
+E2E_ORIGINAL_SCREEN_TIMEOUT=''
 
 find_adb() {
   local macos_user_directory
@@ -190,11 +194,38 @@ deploy() {
   install_and_launch "$serial"
 }
 
+restore_e2e_screen_timeout() {
+  if [[ -n "$E2E_DEVICE_SERIAL" && "$E2E_ORIGINAL_SCREEN_TIMEOUT" =~ ^[0-9]+$ ]]; then
+    "$ADB_BIN" -s "$E2E_DEVICE_SERIAL" shell settings put system screen_off_timeout "$E2E_ORIGINAL_SCREEN_TIMEOUT" >/dev/null 2>&1 || true
+  fi
+}
+
+prepare_e2e_phone() {
+  local serial="$1"
+  local keyguard_state
+
+  E2E_DEVICE_SERIAL="$serial"
+  E2E_ORIGINAL_SCREEN_TIMEOUT="$("$ADB_BIN" -s "$serial" shell settings get system screen_off_timeout | tr -d '\r')"
+  [[ "$E2E_ORIGINAL_SCREEN_TIMEOUT" =~ ^[0-9]+$ ]] ||
+    fail "Could not read the phone's screen timeout."
+  trap restore_e2e_screen_timeout EXIT
+
+  "$ADB_BIN" -s "$serial" shell settings put system screen_off_timeout "$E2E_SCREEN_TIMEOUT_MS"
+  "$ADB_BIN" -s "$serial" shell input keyevent KEYCODE_WAKEUP
+  "$ADB_BIN" -s "$serial" shell wm dismiss-keyguard
+  sleep 1
+  keyguard_state="$("$ADB_BIN" -s "$serial" shell dumpsys window policy)"
+  if grep -q 'showing=true' <<<"$keyguard_state"; then
+    fail 'The phone is locked. Unlock the Android system screen and rerun the E2E command.'
+  fi
+}
+
 run_e2e() {
   local serial
 
   require_command maestro
   serial="$(select_s22)"
+  prepare_e2e_phone "$serial"
   build_release_apk
   install_and_launch "$serial"
 

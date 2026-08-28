@@ -44,6 +44,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 - Observation: The first physical E2E attempt did not reach the application because the phone slept and Android's system keyguard covered the activity.
   Evidence: Maestro failed its initial title assertion, while `dumpsys window` reported `NotificationShade`, `showing=true`, and `SCREEN_STATE_OFF`. This was a device-lock failure, not application authentication.
 
+- Observation: Even when the phone was unlocked immediately before the retry, its short screen timeout elapsed while Maestro initialized its Android driver.
+  Evidence: The preflight reported `showing=false` and `SCREEN_STATE_ON`; by the first title assertion Android again reported `showing=true`, `SCREEN_STATE_OFF`, and `NotificationShade` above the still-focused application.
+
 ## Decision Log
 
 - Decision: Use Android 11+ Wireless debugging pairing rather than a permanently attached USB cable.
@@ -70,6 +73,10 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
   Rationale: The deployed application is available without an access-code prompt, so the physical-device flow should model the real user journey and remain runnable as one command.
   Date/Author: 2026-08-29 / Codex
 
+- Decision: Temporarily extend the phone's screen timeout to ten minutes for the E2E command and restore the original value from an exit trap.
+  Rationale: Maestro driver initialization can exceed the phone's normal timeout. A bounded, reversible setting prevents the system keyguard from covering the app without weakening the user's lock configuration after the run.
+  Date/Author: 2026-08-29 / Codex
+
 ## Outcomes & Retrospective
 
 Repository-side automation and documentation are implemented. Shell and Maestro syntax checks, lint, type checking, all 44 unit tests, and the production arm64 APK build pass. The inspected APK has the expected package, version, SDK levels, ABI, valid signature, and embedded production HTTPS origin. Wireless pairing and one-command physical deployment now work on the user's `SM-S906E`; Android reports version 1.1.0, version code 2, and arm64 ABI installed and launched. The clean-state phrase E2E now follows the direct translation journey and remains to be rerun while the phone is unlocked.
@@ -90,7 +97,7 @@ First, create `scripts/android-s22.sh` as the single implementation point for de
 
 The deploy action will set a non-secret default `EXPO_PUBLIC_API_BASE_URL`, run the existing arm64 release build under the repository's Node 24, Android SDK 36, and JDK 17 requirements, verify that the APK exists, install it with `adb install -r`, stop any old process, and launch the package's launcher activity. It will not clear application data, so a user's stored preferences and Android bearer session survive normal deployments. Root package commands will expose the actions without requiring callers to remember script paths.
 
-Second, add `.maestro/translate-s22.yml` as a clean and explicit physical-device smoke test without changing the existing deterministic emulator flow. The S22+ flow will choose Thai formal and male speaker controls, translate `Спасибо` directly, assert `ขอบคุณครับ`, and confirm both pronunciation sections are populated. The script's `e2e` action will deploy the current APK and invoke Maestro with `--device <selected-serial>` so the test cannot drift to an emulator.
+Second, add `.maestro/translate-s22.yml` as a clean and explicit physical-device smoke test without changing the existing deterministic emulator flow. The S22+ flow will choose Thai formal and male speaker controls, translate `Спасибо` directly, assert `ขอบคุณครับ`, and confirm both pronunciation sections are populated. The script's `e2e` action will verify that the phone is unlocked, temporarily extend and later restore its screen timeout, deploy the current APK, and invoke Maestro with `--device <selected-serial>` so the test cannot drift to an emulator.
 
 Third, update `README.md`, `docs/Architecture.md`, and the test-plan section in `docs/initplan.md`. The documentation will explain the exact Samsung menu path, the distinction between pairing and connection ports, pairing and reconnect commands, automatic deployment, direct clean-state E2E, expected output, and recovery for `unauthorized`, `offline`, lost Wi-Fi pairing, multiple devices, and install version conflicts.
 
@@ -122,7 +129,7 @@ The expected ending states that the APK was installed and package `xyz.autismsta
 
     pnpm test:e2e:android:s22
 
-The command should finish with one passing Maestro flow and should name the same phone serial used during installation.
+The command should be started while the phone is unlocked. It should finish with one passing Maestro flow, name the same phone serial used during installation, and restore the phone's previous screen timeout on exit.
 
 Validate repository behavior:
 
@@ -200,7 +207,7 @@ The production Android API origin embedded during deployment is:
 
 ## Interfaces and Dependencies
 
-`scripts/android-s22.sh` must be a Bash-compatible executable. Its public interface is `scripts/android-s22.sh <status|pair|connect|deploy|e2e> [endpoint]`. It depends only on Bash, ADB, pnpm, the existing Expo/Gradle build, Java 17, Android SDK 36, and Maestro 2.7.0. Device selection reads the serial and `model:` fields from `adb devices -l`. `ANDROID_DEVICE_SERIAL` selects an explicit online target. `EXPO_PUBLIC_API_BASE_URL` can override the non-secret production default.
+`scripts/android-s22.sh` must be a Bash-compatible executable. Its public interface is `scripts/android-s22.sh <status|pair|connect|deploy|e2e> [endpoint]`. It depends only on Bash, ADB, pnpm, the existing Expo/Gradle build, Java 17, Android SDK 36, and Maestro 2.7.0. Device selection reads the serial and `model:` fields from `adb devices -l`. `ANDROID_DEVICE_SERIAL` selects an explicit online target. `EXPO_PUBLIC_API_BASE_URL` can override the non-secret production default. The `e2e` action requires an unlocked phone, saves its numeric `screen_off_timeout`, sets a temporary ten-minute timeout, and restores the saved value through an exit trap.
 
 The root `package.json` must expose `android:s22:status`, `android:s22:pair`, `android:s22:connect`, `deploy:android:s22`, and `test:e2e:android:s22`. The existing package ID and APK output path remain unchanged. `.maestro/translate-s22.yml` is the physical phrase-flow source and runs without secret inputs.
 
@@ -223,3 +230,5 @@ Revision note (2026-08-28 16:10Z): Recorded and fixed the first deploy preflight
 Revision note (2026-08-28 16:18Z): Recorded successful one-command build, wireless installation, and launch on the paired `SM-S906E`, including the one-time Google Play Protect confirmation. The only remaining physical check is the direct production phrase E2E.
 
 Revision note (2026-08-29): Removed the access-code assumption from the S22+ flow, script, and operator documentation after confirming with the user that the application opens without it. Recorded that the first test retry was blocked only by Android's system keyguard.
+
+Revision note (2026-08-29): Hardened the E2E command after an unlocked retry slept during Maestro initialization. The command now keeps the screen awake for the bounded run and restores the user's prior timeout even when the test fails.
