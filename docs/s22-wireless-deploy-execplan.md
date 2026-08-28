@@ -9,7 +9,7 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 ## Progress
 
 - [x] (2026-08-28 15:39Z) Inspected the Expo build, Android package, existing Maestro flow, Android SDK/JDK/ADB/Maestro tools, repository instructions, and Expo SDK 57 configuration and local-build documentation; created branch `codex/s22-wireless-deploy`.
-- [ ] Add and verify an idempotent S22+ pairing, discovery, build, install, and launch script plus root package commands.
+- [x] (2026-08-28 15:44Z) Added and shell-validated the S22+ pairing, discovery, build, install, and launch script plus root package commands; confirmed that missing device and missing PIN paths fail with actionable messages.
 - [ ] Make the Maestro phrase flow explicitly runnable against the selected S22+ and document its production PIN requirement.
 - [ ] Update the repository test plan and operator documentation with one-time phone setup, automatic deploy, E2E, failure recovery, and expected results.
 - [ ] Pair the actual phone, deploy the APK, and run the phrase E2E on it.
@@ -25,6 +25,9 @@ After this change, a developer can pair the Samsung Galaxy S22+ with this Mac on
 
 - Observation: This Mac already has ADB 36.0.0, Android Studio's JDK 17, and Maestro 2.7.0, but no Android device or `_adb-tls-connect` service is currently visible.
   Evidence: `adb devices -l` and `adb mdns services` both returned no devices, while the tool version commands succeeded.
+
+- Observation: The default shell now resolves Node 26, while this workspace explicitly supports Node 24 only.
+  Evidence: `node --version` returned `v26.7.0`; `/opt/homebrew/opt/node@24/bin/node --version` returned `v24.18.0`. The deployment script prepends the installed Node 24 binary and rejects any remaining incompatible runtime.
 
 ## Decision Log
 
@@ -162,3 +165,5 @@ The production Android API origin embedded during deployment is:
 The root `package.json` must expose `android:s22:status`, `android:s22:pair`, `android:s22:connect`, `deploy:android:s22`, and `test:e2e:android:s22`. The existing package ID and APK output path remain unchanged. `.maestro/translate.yml` remains the phrase-flow source and receives `APP_ACCESS_PIN` from the process, never from a tracked file.
 
 Revision note (2026-08-28 15:39Z): Created the initial self-contained plan after repository, toolchain, network-discovery, and Expo SDK 57 documentation review. It records the production-HTTPS build decision because the native fallback `10.0.2.2` is emulator-specific and cannot serve a standalone physical-phone deployment.
+
+Revision note (2026-08-28 15:44Z): Marked the repository deployment automation milestone complete after shell syntax, help output, root-command wiring, and intentional no-device/no-PIN failures were verified. Recorded Node 26 discovery and the script's automatic Node 24 selection.
