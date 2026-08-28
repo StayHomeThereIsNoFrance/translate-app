@@ -29,7 +29,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuthRequiredError, login, translate } from './api';
+import { translate } from './api';
 import {
   defaultPreferences,
   loadPreferences,
@@ -62,64 +62,6 @@ function IconButton({
       testID={testID}>
       <Ionicons color="#3c617f" name={icon} size={20} />
     </Pressable>
-  );
-}
-
-function PinModal({
-  visible,
-  busy,
-  error,
-  onSubmit,
-}: {
-  visible: boolean;
-  busy: boolean;
-  error: string | null;
-  onSubmit: (pin: string) => void;
-}) {
-  const [pin, setPin] = useState('');
-  return (
-    <Modal animationType="fade" transparent visible={visible}>
-      <View style={styles.modalBackdrop}>
-        <View style={styles.pinCard}>
-          <View style={styles.pinIcon}>
-            <Ionicons color="#1a73e8" name="lock-closed" size={24} />
-          </View>
-          <Text style={styles.pinTitle}>Доступ к переводчику</Text>
-          <Text style={styles.pinSubtitle}>
-            Введите PIN, заданный для production-сервиса.
-          </Text>
-          <TextInput
-            accessibilityLabel="PIN"
-            autoCapitalize="none"
-            autoCorrect={false}
-            onChangeText={setPin}
-            onSubmitEditing={() => pin && onSubmit(pin)}
-            placeholder="PIN"
-            secureTextEntry
-            style={styles.pinInput}
-            testID="pin-input"
-            value={pin}
-          />
-          {error ? <Text style={styles.pinError}>{error}</Text> : null}
-          <Pressable
-            accessibilityRole="button"
-            disabled={!pin || busy}
-            onPress={() => onSubmit(pin)}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              (!pin || busy) && styles.buttonDisabled,
-              pressed && styles.pressed,
-            ]}
-            testID="pin-submit">
-            {busy ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Войти</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -227,10 +169,6 @@ export function TranslatorScreen() {
   const [result, setResult] = useState<TranslationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pinVisible, setPinVisible] = useState(false);
-  const [pinBusy, setPinBusy] = useState(false);
-  const [pinError, setPinError] = useState<string | null>(null);
-  const [pendingAfterLogin, setPendingAfterLogin] = useState(false);
   const [copied, setCopied] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
 
@@ -286,37 +224,13 @@ export function TranslatorScreen() {
       });
       setResult(translated);
     } catch (translationError) {
-      if (translationError instanceof AuthRequiredError) {
-        setPendingAfterLogin(true);
-        setPinVisible(true);
-      } else {
-        setError(
-          translationError instanceof Error
-            ? translationError.message
-            : 'Не удалось выполнить перевод',
-        );
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function submitPin(pin: string) {
-    setPinBusy(true);
-    setPinError(null);
-    try {
-      await login(pin);
-      setPinVisible(false);
-      if (pendingAfterLogin) {
-        setPendingAfterLogin(false);
-        await runTranslation();
-      }
-    } catch (loginError) {
-      setPinError(
-        loginError instanceof Error ? loginError.message : 'Не удалось войти',
+      setError(
+        translationError instanceof Error
+          ? translationError.message
+          : 'Не удалось выполнить перевод',
       );
     } finally {
-      setPinBusy(false);
+      setLoading(false);
     }
   }
 
@@ -573,12 +487,6 @@ export function TranslatorScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
-      <PinModal
-        busy={pinBusy}
-        error={pinError}
-        onSubmit={(pin) => void submitPin(pin)}
-        visible={pinVisible}
-      />
       <SettingsModal
         onChangeWordTranslations={setShowWordTranslations}
         onClose={() => setSettingsVisible(false)}
@@ -923,59 +831,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 24,
-  },
-  pinCard: {
-    alignItems: 'stretch',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    maxWidth: 380,
-    padding: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 26,
-    width: '100%',
-  },
-  pinIcon: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: '#e8f1fd',
-    borderRadius: 25,
-    height: 50,
-    justifyContent: 'center',
-    marginBottom: 14,
-    width: 50,
-  },
-  pinTitle: {
-    color: '#172b3a',
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  pinSubtitle: {
-    color: '#708090',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 18,
-    marginTop: 7,
-    textAlign: 'center',
-  },
-  pinInput: {
-    borderColor: '#cad6e2',
-    borderRadius: 12,
-    borderWidth: 1,
-    color: '#172b3a',
-    fontSize: 18,
-    marginBottom: 10,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    textAlign: 'center',
-  },
-  pinError: {
-    color: '#b3261e',
-    fontSize: 13,
-    marginBottom: 10,
-    textAlign: 'center',
   },
   settingsCard: {
     backgroundColor: '#ffffff',
