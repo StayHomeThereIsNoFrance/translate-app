@@ -5,6 +5,8 @@ node_modules
 **/android
 **/ios
 coverage
+dist
+**/dist
 playwright-report
 test-results
 .env

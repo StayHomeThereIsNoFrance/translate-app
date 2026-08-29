@@ -11,7 +11,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-28 23:56Z) Created `codex/apk-coolify-download` from the clean `main` branch and inspected repository, Android, Docker, API static-file, and current Coolify application configuration.
 - [x] (2026-08-28 23:56Z) Read the Expo SDK 57 reference and current official Expo Android APK/local-production guidance before designing the implementation.
 - [x] (2026-08-28 23:59Z) Added and tested the direct APK HTTP route; all 20 API tests and API type checking pass under Node 24.
-- [ ] Add the reusable APK build script and wire the Android toolchain and artifact into the production Docker image.
+- [ ] Add the reusable APK build script and wire the Android toolchain and artifact into the production Docker image (completed: script, S22+ reuse, pinned Docker stages, and validated local APK; remaining: full Linux image build).
 - [ ] Document the operator and user workflow, then run repository and container verification.
 - [ ] Push the feature branch, switch the Coolify application to it, deploy through Coolify MCP, and verify the live APK response and artifact integrity.
 
@@ -28,6 +28,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 
 - Observation: The interactive shell defaults to Node 26 even though this workspace requires Node 24, and `@fastify/static` replaces a custom cache header unless cache-control generation is disabled for that `sendFile` call.
   Evidence: the first pnpm attempt stopped with `Expected version: >=24 <25, Got: v26.7.0`; the first route test received `public, max-age=0` until `sendFile` was passed `{ cacheControl: false }`. Node 24.18.0 is available at `/opt/homebrew/opt/node@24/bin`.
+
+- Observation: The first full local APK run reached final release tasks but Android Studio's macOS ARM JDK 17.0.10 crashed inside its C1 JIT compiler rather than reporting a Gradle or source error.
+  Evidence: `hs_err_pid85336.log` reports `Internal Error (assembler_aarch64.hpp:267)`, `Field too big for insn`, and current thread `C1 CompilerThread0` after 14 minutes 41 seconds. The script now disables tiered compilation only for that exact macOS JDK 17.0.10 family; the Debian Docker stage uses its current OpenJDK 17 package.
 
 ## Decision Log
 
@@ -149,6 +152,19 @@ Initial validated local APK:
     size: approximately 41 MiB
     SHA-256: 5e1cf3e48413f870d3455c015d95fe2602de3f162781d8889e6e408d113614a9
 
+Validated output from the new build script after the JDK-specific retry:
+
+    Gradle result: BUILD SUCCESSFUL in 7m 7s, 576 actionable tasks
+    path: dist/apk/thai-ai-translate.apk
+    bytes: 42583829
+    SHA-256: eaa9ebe2882a3fa45821d276a2cdc4c684fb707cf50c56d5f193be0fce5c8079
+    package: xyz.autismstaking.thaitranslate
+    version: 1.1.0 (versionCode 2)
+    min/target/compile SDK: 24/36/36
+    ABI: arm64-v8a
+    signing: APK Signature Scheme v2 verified, one signer
+    ZIP integrity: no errors
+
 Initial Coolify state:
 
     application: ek2k3scxtyw65x3a6csxs0tu (thai-ai-translate)
@@ -172,3 +188,7 @@ The Docker Android stage depends on Node 24, pnpm 10.19.0, OpenJDK 17, official 
 Revision note (2026-08-28 23:56Z): Created the initial self-contained plan after repository inspection, exact Expo SDK 57 documentation review, generated Gradle toolchain inspection, and read-only Coolify MCP discovery. It records the server-side Docker build decision because the Coolify Git build cannot see an ignored local APK and direct non-MCP artifact transfer is prohibited.
 
 Revision note (2026-08-28 23:59Z): Recorded the local Node version mismatch and Fastify static cache-header behavior discovered by the first API test run. The route disables the plugin's generated cache header on that response so the stable download URL can explicitly require revalidation.
+
+Revision note (2026-08-29 00:12Z): Recorded the first local APK attempt and its macOS ARM JDK 17.0.10 C1 compiler crash. Added a narrowly scoped `-XX:-TieredCompilation` workaround for that JDK so source or Gradle failures remain distinguishable, while the Coolify Linux build continues on current Debian OpenJDK 17.
+
+Revision note (2026-08-29 00:20Z): Recorded the successful retry through the new script, including package metadata, v2 signature verification, ZIP integrity, size, and digest. Marked the build milestone partially complete pending the independent Linux Docker image build.
