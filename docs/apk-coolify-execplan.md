@@ -11,9 +11,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-28 23:56Z) Created `codex/apk-coolify-download` from the clean `main` branch and inspected repository, Android, Docker, API static-file, and current Coolify application configuration.
 - [x] (2026-08-28 23:56Z) Read the Expo SDK 57 reference and current official Expo Android APK/local-production guidance before designing the implementation.
 - [x] (2026-08-28 23:59Z) Added and tested the direct APK HTTP route; all 20 API tests and API type checking pass under Node 24.
-- [ ] Add the reusable APK build script and wire the Android toolchain and artifact into the production Docker image (completed: script, S22+ reuse, pinned Docker stages, and validated local APK; remaining: full Linux image build).
-- [ ] Document the operator and user workflow, then run repository and container verification (completed: README, architecture, initial plan, local APK and Linux toolchain checks, plus repository-wide lint, type checking, 37 unit tests, web export, and API build; remaining: native Coolify container verification).
-- [ ] Push the feature branch, switch the Coolify application to it, deploy through Coolify MCP, and verify the live APK response and artifact integrity.
+- [x] (2026-08-29 01:11Z) Added the reusable APK build script, shared it with the S22+ workflow, and wired the pinned Android toolchain and artifact into the production Docker image; the native Linux image build completed successfully in Coolify.
+- [x] (2026-08-29 01:11Z) Documented the operator and user workflow and completed repository and container verification: lint, type checking, 37 unit tests, web/API builds, local APK inspection, and native Coolify build/healthcheck all pass.
+- [x] (2026-08-29 01:12Z) Pushed the feature branch, switched the Coolify application to it through MCP, completed deployment `zyrr41o2q7dr2qb2eb2yclqm`, and verified the live APK response and artifact integrity.
 
 ## Surprises & Discoveries
 
@@ -34,6 +34,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 
 - Observation: A forced `linux/amd64` Docker build on the ARM Mac validated the complete pinned Android toolchain layer and Expo Prebuild, but cross-architecture Gradle stopped producing output while the Docker VM became nearly idle, so the emulated build was cancelled after 33 minutes rather than treated as success.
   Evidence: the build verified the command-line-tools SHA-256, installed SDK 36, Build Tools 36.0.0, NDK 27.1.12297006 and CMake 3.22.1, finished the web/API builder, and reached the Gradle 9.3.1 daemon. It then produced no task output for about 20 minutes; the Docker VM fell from roughly 171% to 1.6% CPU and even read-only BuildKit history calls stalled. The terminal result was explicitly `Canceled: context canceled`.
+
+- Observation: The same Docker build completed normally on Coolify's native Linux host, confirming that the local stall was an emulation limitation rather than an application or Gradle failure.
+  Evidence: deployment `zyrr41o2q7dr2qb2eb2yclqm` built commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8`, completed its Docker image from 01:04:19Z to 01:10:30Z, passed the first container healthcheck, completed its rolling update, and ended with status `finished`.
 
 ## Decision Log
 
@@ -59,7 +62,11 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 
 ## Outcomes & Retrospective
 
-Implementation is in progress. The outcome will be complete only after the feature branch has built successfully in Coolify and the public `/apk` response has been verified as the APK produced by that deployment.
+The feature is complete on `codex/apk-coolify-download`. The repository now has one reproducible `pnpm build:apk` entry point; Coolify builds the arm64 preview APK in a dedicated Android stage and copies only the artifact into the Node runtime; and Fastify publishes it from the stable exact route `GET /apk` without allowing the SPA fallback to substitute HTML.
+
+Coolify built and deployed commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8` successfully. The replacement container passed its first `/healthz` check and the application reports `running:healthy` from the feature branch. A fresh public download returned HTTP 200 with the expected APK media type, attachment filename, and no-cache policy. The 42,583,825-byte file passed ZIP integrity and APK Signature Scheme v2 verification and reports the expected package, version, SDK levels, and arm64 ABI.
+
+The one incomplete local experiment was the forced x86 Linux Docker build under ARM Mac emulation. It was deliberately cancelled after the Docker VM stopped making progress, then superseded by the successful native Coolify Linux build. No product acceptance criterion remains open. The application stays on the feature branch until the user approves merging it into the repository's actual default branch, `main`.
 
 ## Context and Orientation
 
@@ -180,6 +187,27 @@ Initial Coolify state:
     domain: https://translate.hetz.autismstaking.xyz
     build pack: dockerfile, /Dockerfile
 
+Successful Coolify deployment and public artifact:
+
+    deployment: zyrr41o2q7dr2qb2eb2yclqm
+    deployed commit: 94a6640007f7fa9db678d8ddfa15c8b1c69801e8
+    deployment status: finished
+    application status: running:healthy
+    branch: codex/apk-coolify-download
+    URL: https://translate.hetz.autismstaking.xyz/apk
+    HTTP: 200
+    Content-Type: application/vnd.android.package-archive
+    Content-Disposition: attachment; filename="thai-ai-translate.apk"
+    Cache-Control: no-cache
+    bytes: 42583825
+    SHA-256: 9dfd71a07c1b7ae42c95ce28f38b8af77d151047cc15f13b7f1d9ec20e641f21
+    package: xyz.autismstaking.thaitranslate
+    version: 1.1.0 (versionCode 2)
+    min/target/compile SDK: 24/36/36
+    ABI: arm64-v8a
+    signing: APK Signature Scheme v2 verified, one signer
+    ZIP integrity: no errors
+
 The official Android download page listed command-line tools build `15859902` for Linux with SHA-256 `4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583` during design. Those exact values will be pinned in the Dockerfile.
 
 ## Interfaces and Dependencies
@@ -205,3 +233,5 @@ Revision note (2026-08-29 00:56Z): Recorded the bounded cross-architecture Docke
 Revision note (2026-08-29 01:00Z): Documented the direct URL, shared build command, Docker stage boundaries, stable-route headers, cold-build expectations, arm64 scope, and preview-signing limitation in the user guide, architecture, and original delivery plan.
 
 Revision note (2026-08-29 01:10Z): Recorded the successful repository-wide verification (`pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build`, and `git diff --check`). Excluded README and documentation from the Docker build context so a post-deployment evidence-only plan update can reuse the verified application-image cache.
+
+Revision note (2026-08-29 01:12Z): Marked all milestones complete after native Coolify deployment and public endpoint verification. Recorded the deployed commit and deployment UUID, healthy rolling update, response headers, artifact digest and size, Android manifest metadata, ABI, ZIP integrity, and v2 signature result.
