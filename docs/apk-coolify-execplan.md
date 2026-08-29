@@ -12,7 +12,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-28 23:56Z) Read the Expo SDK 57 reference and current official Expo Android APK/local-production guidance before designing the implementation.
 - [x] (2026-08-28 23:59Z) Added and tested the direct APK HTTP route; all 20 API tests and API type checking pass under Node 24.
 - [ ] Add the reusable APK build script and wire the Android toolchain and artifact into the production Docker image (completed: script, S22+ reuse, pinned Docker stages, and validated local APK; remaining: full Linux image build).
-- [ ] Document the operator and user workflow, then run repository and container verification.
+- [ ] Document the operator and user workflow, then run repository and container verification (completed: README, architecture, initial plan, local APK and Linux toolchain checks; remaining: repository-wide commands and native Coolify container verification).
 - [ ] Push the feature branch, switch the Coolify application to it, deploy through Coolify MCP, and verify the live APK response and artifact integrity.
 
 ## Surprises & Discoveries
@@ -201,3 +201,5 @@ Revision note (2026-08-29 00:12Z): Recorded the first local APK attempt and its 
 Revision note (2026-08-29 00:20Z): Recorded the successful retry through the new script, including package metadata, v2 signature verification, ZIP integrity, size, and digest. Marked the build milestone partially complete pending the independent Linux Docker image build.
 
 Revision note (2026-08-29 00:56Z): Recorded the bounded cross-architecture Docker attempt accurately: Linux toolchain and Expo Prebuild passed, but the emulated Gradle process was cancelled after the Docker VM became nearly idle. Added a four-worker one-shot Gradle policy and persistent BuildKit Gradle cache before the required native Coolify deployment verification.
+
+Revision note (2026-08-29 01:00Z): Documented the direct URL, shared build command, Docker stage boundaries, stable-route headers, cold-build expectations, arm64 scope, and preview-signing limitation in the user guide, architecture, and original delivery plan.

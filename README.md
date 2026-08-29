@@ -4,6 +4,8 @@ Universal Russian ↔ Thai AI translator for Android and web.
 
 Production: [translate.hetz.autismstaking.xyz](https://translate.hetz.autismstaking.xyz)
 
+Android APK: [translate.hetz.autismstaking.xyz/apk](https://translate.hetz.autismstaking.xyz/apk)
+
 ## Local development
 
 Requirements are Node 24, pnpm 10, Java 17, Android SDK 36, Docker, Playwright,
@@ -24,14 +26,48 @@ environment. See `.env.example`. The web development server expects the API at
 ```bash
 pnpm verify
 pnpm test:live
-pnpm build:android
+pnpm build:apk
 ```
 
 Architecture and deployment details are in `docs/Architecture.md`.
 
-`build:android` creates an `arm64-v8a` preview APK. Use
-`pnpm --filter @thai-translate/client build:android:universal` only when a
+`build:apk` creates `dist/apk/thai-ai-translate.apk`, prints its byte count and
+SHA-256, and targets the production HTTPS API by default. The lower-level
+`build:android` command leaves Gradle's output in the generated native project.
+Use `pnpm --filter @thai-translate/client build:android:universal` only when a
 four-ABI APK is required.
+
+## APK download and Coolify publishing
+
+Every production Docker build runs `scripts/build-apk.sh` in a dedicated Debian
+Android toolchain stage. The final Alpine image receives only the generated APK
+at `/app/web/thai-ai-translate.apk`; Java, Android SDK, NDK, CMake, and generated
+native sources stay outside the runtime image. Fastify serves the artifact from
+the stable direct download route:
+
+```text
+https://translate.hetz.autismstaking.xyz/apk
+```
+
+The route returns the Android APK media type and downloads the file as
+`thai-ai-translate.apk`. Deploying a new Git revision through Coolify rebuilds
+and replaces the artifact together with the web/API container. The first cold
+deployment is substantially slower than a web-only build because Gradle must
+compile React Native; Docker caches the pinned Android toolchain and Gradle
+dependencies for later builds.
+
+This is an `arm64-v8a` sideloadable preview signed with the generated preview
+key. It is suitable for the existing Galaxy S22+ workflow, but it is not a
+Google Play release artifact. A Play release requires a separately managed
+upload key and normally an Android App Bundle (`.aab`).
+
+For local output or a non-production API origin, use the non-secret overrides:
+
+```bash
+APK_OUTPUT_PATH=dist/apk/custom.apk \
+EXPO_PUBLIC_API_BASE_URL=https://example.test \
+pnpm build:apk
+```
 
 ## Galaxy S22+ wireless deployment and E2E
 
@@ -55,8 +91,9 @@ The Mac and phone must be on the same Wi-Fi network. One-time phone setup:
    pnpm android:s22:status
    ```
 
-After pairing, one command builds an arm64 release APK for the production HTTPS
-API, installs it as an update on the online `SM-S906*` Galaxy S22+, and opens it:
+After pairing, one command uses the same APK build script as Coolify, installs
+the arm64 production-API build as an update on the online `SM-S906*` Galaxy
+S22+, and opens it:
 
 ```bash
 pnpm deploy:android:s22

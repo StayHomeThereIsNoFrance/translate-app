@@ -14,9 +14,11 @@ or database. Device-local storage keeps the selected mode and speaker gender.
 flowchart LR
   A["Android app<br/>Expo Router"] -->|HTTPS JSON| B["Thai Translate API<br/>Fastify"]
   W["Web app<br/>React Native Web"] -->|Same-origin JSON| B
+  U["Android user"] -->|"GET /apk"| B
   B -->|Responses API<br/>Docker network| P["cliproxyapi<br/>agent-docker"]
   B --> M["Markdown prompts<br/>config/prompts"]
   B --> S["Static web export"]
+  B --> K["arm64 preview APK"]
 ```
 
 ## Repository and Components
@@ -30,11 +32,15 @@ flowchart LR
   payloads, modes, gender, languages, and length limits.
 - `config/prompts` is the only source of translation prompts. Prompt files are
   not exposed or editable in the UI and are loaded once during API startup.
+- `scripts/build-apk.sh` is the shared APK build entry point used locally, by
+  the physical S22+ workflow, and by the Coolify Docker build.
 
 The workspace uses pnpm and Node 24 LTS. Expo SDK 57 compiles Android against
 SDK 36. Native `android/` and `ios/` projects are generated build artifacts and
-are not versioned. The preview APK targets `arm64-v8a`; a universal four-ABI
-artifact remains available through `pnpm --filter client build:android:universal`.
+are not versioned. The preview APK targets `arm64-v8a`; `pnpm build:apk`
+normalizes it to `dist/apk/thai-ai-translate.apk`. A universal four-ABI artifact
+remains available through
+`pnpm --filter @thai-translate/client build:android:universal`.
 
 ## Runtime Data Flow
 
@@ -90,6 +96,12 @@ Response:
 Returns process readiness and the configured model. It never calls the model or
 returns credentials.
 
+### `GET /apk`
+
+Downloads the current `arm64-v8a` preview as `thai-ai-translate.apk` with the
+Android package media type. The stable route is available only in production
+static-serving mode, where the Docker build guarantees that the APK exists.
+
 ## Security and Failure Handling
 
 - `CLIPROXYAPI_API_KEY` is a server-only environment value. Expo public
@@ -118,6 +130,23 @@ HTTPS and routes `translate.hetz.autismstaking.xyz` to port 3000. One production
 container serves the exported Expo web files and `/api/*`, keeping browser
 requests same-origin.
 
+The Docker build has independent web/API and Android stages. The Android stage
+uses checksum-pinned official command-line tools, OpenJDK 17, Android SDK and
+Build Tools 36, NDK 27.1.12297006, and CMake 3.22.1. It runs the repository APK
+script with the production origin embedded through `EXPO_PUBLIC_API_BASE_URL`.
+Only `/tmp/thai-ai-translate.apk` crosses into the final Alpine runtime, where
+it is stored beside the static web export. Java and the multi-gigabyte Android
+toolchain remain build-only. A four-worker Gradle limit bounds resource use,
+and a BuildKit cache preserves Gradle dependencies across source revisions.
+
+Fastify registers exact route `GET /apk` before its single-page-app fallback.
+The route sends `/app/web/thai-ai-translate.apk` as
+`application/vnd.android.package-archive`, names the attachment
+`thai-ai-translate.apk`, and requires cache revalidation so a stable URL does
+not leave devices on an old deployment. The artifact is the arm64 sideloaded
+preview build signed with Expo Prebuild's generated debug key; Google Play
+signing and `.aab` distribution are intentionally separate concerns.
+
 ## Verification
 
 - Contracts and API use Vitest with coverage thresholds and Fastify injection.
@@ -133,7 +162,7 @@ requests same-origin.
   and checks required vocabulary and gender particles without expecting an
   entirely deterministic model sentence.
 
-The root `pnpm verify` command runs lint, TypeScript checks, 36 unit tests,
+The root `pnpm verify` command runs lint, TypeScript checks, 37 unit tests,
 six desktop/mobile Playwright scenarios, and both production builds. Android
 Maestro and the live provider smoke test are explicit commands because they
 require an Android target and a provider credential. The S22+ workflow uses
@@ -142,3 +171,8 @@ require an Android target and a provider credential. The S22+ workflow uses
 performed with `pnpm android:s22:pair -- HOST:PAIR_PORT`; ADB normally remembers
 that trust relationship and reconnects through mDNS while both devices remain
 on the same Wi-Fi network.
+
+`pnpm build:apk` is also explicit because it requires Java 17 and Android SDK
+36 and takes several minutes. The Docker image runs the same script during each
+Coolify deployment, and production acceptance checks both `/healthz` and the
+binary response at `https://translate.hetz.autismstaking.xyz/apk`.
