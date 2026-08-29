@@ -32,6 +32,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - Observation: The first full local APK run reached final release tasks but Android Studio's macOS ARM JDK 17.0.10 crashed inside its C1 JIT compiler rather than reporting a Gradle or source error.
   Evidence: `hs_err_pid85336.log` reports `Internal Error (assembler_aarch64.hpp:267)`, `Field too big for insn`, and current thread `C1 CompilerThread0` after 14 minutes 41 seconds. The script now disables tiered compilation only for that exact macOS JDK 17.0.10 family; the Debian Docker stage uses its current OpenJDK 17 package.
 
+- Observation: A forced `linux/amd64` Docker build on the ARM Mac validated the complete pinned Android toolchain layer and Expo Prebuild, but cross-architecture Gradle stopped producing output while the Docker VM became nearly idle, so the emulated build was cancelled after 33 minutes rather than treated as success.
+  Evidence: the build verified the command-line-tools SHA-256, installed SDK 36, Build Tools 36.0.0, NDK 27.1.12297006 and CMake 3.22.1, finished the web/API builder, and reached the Gradle 9.3.1 daemon. It then produced no task output for about 20 minutes; the Docker VM fell from roughly 171% to 1.6% CPU and even read-only BuildKit history calls stalled. The terminal result was explicitly `Canceled: context canceled`.
+
 ## Decision Log
 
 - Decision: Build the APK inside a dedicated Docker build stage and copy only the final APK into the small Node runtime image.
@@ -49,6 +52,10 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - Decision: Pin Android command-line tools, SDK 36, Build Tools 36.0.0, NDK 27.1.12297006, and CMake 3.22.1 in the Dockerfile.
   Rationale: A deployment build must be reproducible and must match the toolchain required by Expo SDK 57 and the generated Gradle project. The command-line-tools archive will be verified by its published SHA-256 checksum before extraction.
   Date/Author: 2026-08-28 / Codex
+
+- Decision: Cap Gradle at four workers, disable its persistent daemon for release commands, and mount `/root/.gradle` as a BuildKit cache in the APK stage.
+  Rationale: Coolify permits two concurrent builds and the generated native project otherwise fans out across every CPU. A bounded single-build worker count makes resource use predictable, the one-shot daemon cannot leak beyond the image step, and the cache avoids downloading Gradle dependencies again whenever application source invalidates the APK layer.
+  Date/Author: 2026-08-29 / Codex
 
 ## Outcomes & Retrospective
 
@@ -192,3 +199,5 @@ Revision note (2026-08-28 23:59Z): Recorded the local Node version mismatch and 
 Revision note (2026-08-29 00:12Z): Recorded the first local APK attempt and its macOS ARM JDK 17.0.10 C1 compiler crash. Added a narrowly scoped `-XX:-TieredCompilation` workaround for that JDK so source or Gradle failures remain distinguishable, while the Coolify Linux build continues on current Debian OpenJDK 17.
 
 Revision note (2026-08-29 00:20Z): Recorded the successful retry through the new script, including package metadata, v2 signature verification, ZIP integrity, size, and digest. Marked the build milestone partially complete pending the independent Linux Docker image build.
+
+Revision note (2026-08-29 00:56Z): Recorded the bounded cross-architecture Docker attempt accurately: Linux toolchain and Expo Prebuild passed, but the emulated Gradle process was cancelled after the Docker VM became nearly idle. Added a four-worker one-shot Gradle policy and persistent BuildKit Gradle cache before the required native Coolify deployment verification.

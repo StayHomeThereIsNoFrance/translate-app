@@ -51,7 +51,8 @@ ARG EXPO_PUBLIC_API_BASE_URL=https://translate.hetz.autismstaking.xyz
 ENV EXPO_PUBLIC_API_BASE_URL=$EXPO_PUBLIC_API_BASE_URL
 
 COPY . .
-RUN APK_OUTPUT_PATH=/tmp/thai-ai-translate.apk ./scripts/build-apk.sh
+RUN --mount=type=cache,target=/root/.gradle \
+  APK_OUTPUT_PATH=/tmp/thai-ai-translate.apk ./scripts/build-apk.sh
 
 FROM node:24-alpine AS runtime
 
