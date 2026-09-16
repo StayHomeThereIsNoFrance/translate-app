@@ -10,13 +10,13 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 
 ## Progress
 
-- [x] (2026-09-16 15:05+07:00) Inspected the production Docker graph, repository build commands, current Coolify application, and the dirty worktree belonging to another task.
-- [x] (2026-09-16 15:06+07:00) Created isolated branch `codex/deployment-path-caching` in a separate worktree based on clean `main`.
-- [x] (2026-09-16 15:23+07:00) Separated the Android toolchain and APK inputs from API-only and repository-only files.
-- [x] (2026-09-16 15:27+07:00) Added a deterministic deployment-impact classifier and regression checks for no-op, server-only, APK-affecting, and identical-tree merge changes.
-- [x] (2026-09-16 15:39+07:00) Recorded the no-redeploy identical-tree merge procedure, deployment classification, and Coolify watch-path source of truth.
-- [x] (2026-09-16 15:43+07:00) Passed lint, type checking, 37 unit tests, deployment-policy regression tests, production web/API builds, shell syntax, and Docker stage-boundary assertions.
-- [ ] Push the branch, configure Coolify watch paths through MCP, deploy the branch, and verify production health and APK delivery.
+- [x] (2026-09-16 20:23+07:00) Inspected the production Docker graph, repository build commands, current Coolify application, and the dirty worktree belonging to another task.
+- [x] (2026-09-16 20:23+07:00) Created isolated branch `codex/deployment-path-caching` in a separate worktree based on clean `main`.
+- [x] (2026-09-16 20:30+07:00) Separated the Android toolchain and APK inputs from API-only and repository-only files.
+- [x] (2026-09-16 20:30+07:00) Added a deterministic deployment-impact classifier and regression checks for no-op, server-only, APK-affecting, and identical-tree merge changes.
+- [x] (2026-09-16 20:31+07:00) Recorded the no-redeploy identical-tree merge procedure, deployment classification, and Coolify watch-path source of truth.
+- [x] (2026-09-16 20:32+07:00) Passed lint, type checking, 37 unit tests, deployment-policy regression tests, production web/API builds, shell syntax, and Docker stage-boundary assertions.
+- [x] (2026-09-16 20:50+07:00) Pushed the branch, saved ordered Coolify watch paths through MCP, deployed commit `77eff665`, and verified the public web page, `/healthz`, and a ranged `/apk` response in an isolated agent-browser session.
 
 ## Surprises & Discoveries
 
@@ -55,9 +55,13 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 
 ## Outcomes & Retrospective
 
-Implementation and production evidence will be recorded here after validation.
+The selective deployment policy is implemented and the feature branch is live in Coolify pending user approval. Lint, type checking, 37 unit tests, policy regression tests, and production web/API builds pass. Coolify saved the exact ordered watch-path value from `config/deployment/coolify-watch-paths.txt`, with automatic deployment and Docker caching enabled.
 
-Repository implementation is complete and verified. The remaining work is the native Coolify feature-branch build, saved watch-path verification, and public endpoint smoke checks.
+The first native image build completed but its container failed healthcheck because the initial global Markdown ignore also excluded production prompts. Coolify kept the previous healthy container. After narrowing the rule and adding a regression assertion, deployment `rsqilb2djstzoyp5yls8k8a3` built commit `77eff6654e2fbe0ab61a6e5625411e5521d14311`, produced the APK with SHA-256 `a3af1c8266871e9a32206162169a25b8a719da58e26de4176b0a149b5251ef6d`, passed healthcheck on its first attempt, and finished its rolling update.
+
+Public verification used an isolated `agent-browser` session. The production page rendered its translator controls. `/healthz` returned `200` with status `ok`. A same-origin ranged request to `/apk` returned `206`, Android package media type, attachment filename `thai-ai-translate.apk`, `no-store`, exactly 1024 requested bytes, and total artifact size 42,583,825 bytes.
+
+The repository now expresses three outcomes: irrelevant changes do not deploy, server/prompt changes deploy while the APK stage remains independent, and client/shared/dependency/Docker changes rebuild the APK. The exact no-redeploy merge workflow is recorded in `AGENTS.md`. The remaining lifecycle step is user approval followed by merge to `main`; if the classifier reports no production difference from the already deployed revision, that handoff changes only Coolify's branch setting and performs no deploy or restart.
 
 ## Context and Orientation
 
