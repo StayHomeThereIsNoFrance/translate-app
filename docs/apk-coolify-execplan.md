@@ -14,7 +14,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-29 01:11Z) Added the reusable APK build script, shared it with the S22+ workflow, and wired the pinned Android toolchain and artifact into the production Docker image; the native Linux image build completed successfully in Coolify.
 - [x] (2026-08-29 01:11Z) Documented the operator and user workflow and completed repository and container verification: lint, type checking, 37 unit tests, web/API builds, local APK inspection, and native Coolify build/healthcheck all pass.
 - [x] (2026-08-29 01:12Z) Pushed the feature branch, switched the Coolify application to it through MCP, completed deployment `zyrr41o2q7dr2qb2eb2yclqm`, and verified the live APK response and artifact integrity.
-- [ ] (2026-09-16 12:00Z) Diagnosed an Android Chrome download that remained at 100%, reproduced the conditional-cache response, and added a tested no-store/no-validator fix; remaining: deploy through Coolify MCP and repeat the mobile and conditional live checks.
+- [x] (2026-09-16 12:15Z) Diagnosed an Android Chrome download that remained at 100%, reproduced the conditional-cache response, deployed the no-store/no-validator fix through Coolify MCP, and verified conditional, range, and two consecutive emulated mobile downloads against production.
 
 ## Surprises & Discoveries
 
@@ -73,6 +73,8 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 The feature is complete on `codex/apk-coolify-download`. The repository now has one reproducible `pnpm build:apk` entry point; Coolify builds the arm64 preview APK in a dedicated Android stage and copies only the artifact into the Node runtime; and Fastify publishes it from the stable exact route `GET /apk` without allowing the SPA fallback to substitute HTML.
 
 Coolify built and deployed commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8` successfully. The replacement container passed its first `/healthz` check and the application reports `running:healthy` from the feature branch. A fresh public download returned HTTP 200 with the expected APK media type, attachment filename, and no-cache policy. The 42,583,825-byte file passed ZIP integrity and APK Signature Scheme v2 verification and reports the expected package, version, SDK levels, and arm64 ABI.
+
+On 2026-09-16 an Android Chrome download was observed remaining at 100%. Production logs and an HTTP reproduction showed that the original revalidation policy could return a bodyless `304` to a follow-up download navigation. Commit `1e735497b6ead985e2e62c6aa9c700fe8bdb7b84` disables storage and validators for `/apk`; Coolify deployment `52ycwhezrshutgv1x1vuhvdr` finished healthy. A production request carrying the old ETag and a future If-Modified-Since now returns a complete `200` response, byte-range resume still returns `206`, and two consecutive Pixel 7-emulated Chrome downloads both completed with the full file and matching digest. Repository lint, type checking, and all 37 unit tests pass after the fix.
 
 The one incomplete local experiment was the forced x86 Linux Docker build under ARM Mac emulation. It was deliberately cancelled after the Docker VM stopped making progress, then superseded by the successful native Coolify Linux build. No product acceptance criterion remains open. The application stays on the feature branch until the user approves merging it into the repository's actual default branch, `main`.
 
@@ -216,6 +218,21 @@ Successful Coolify deployment and public artifact:
     signing: APK Signature Scheme v2 verified, one signer
     ZIP integrity: no errors
 
+Android Chrome cache-fix deployment:
+
+    deployment: 52ycwhezrshutgv1x1vuhvdr
+    deployed commit: 1e735497b6ead985e2e62c6aa9c700fe8bdb7b84
+    deployment status: finished
+    application status: running:healthy
+    branch: codex/apk-coolify-download
+    Cache-Control: no-store, max-age=0
+    ETag / Last-Modified: absent
+    conditional request with old validators: HTTP 200, 42583825 bytes
+    range request: HTTP 206, correct Content-Range
+    two consecutive mobile-Chrome downloads: HTTP 200, complete
+    SHA-256: 6d132cdd66ca10751010d32c0b5c90c82fc64d5da4ffb464590e9321cb765d76
+    health: HTTP 200
+
 The official Android download page listed command-line tools build `15859902` for Linux with SHA-256 `4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583` during design. Those exact values will be pinned in the Dockerfile.
 
 ## Interfaces and Dependencies
@@ -245,3 +262,5 @@ Revision note (2026-08-29 01:10Z): Recorded the successful repository-wide verif
 Revision note (2026-08-29 01:12Z): Marked all milestones complete after native Coolify deployment and public endpoint verification. Recorded the deployed commit and deployment UUID, healthy rolling update, response headers, artifact digest and size, Android manifest metadata, ABI, ZIP integrity, and v2 signature result.
 
 Revision note (2026-09-16 12:00Z): Reopened the plan for an Android Chrome 100%-download stall. Correlated the user screenshot with a live bodyless `304`, reproduced conditional and range requests, and recorded the tested decision to disable caching validators for this attachment while preserving resumable byte ranges.
+
+Revision note (2026-09-16 12:15Z): Closed the Android Chrome follow-up after successful deployment `52ycwhezrshutgv1x1vuhvdr`. Recorded the healthy rolling update, full `200` response to old validators, retained `206` range behavior, two complete emulated Pixel 7 downloads, artifact digest, and repository-wide verification.
