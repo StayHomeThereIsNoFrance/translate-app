@@ -14,7 +14,7 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 - [x] (2026-09-16 15:06+07:00) Created isolated branch `codex/deployment-path-caching` in a separate worktree based on clean `main`.
 - [x] (2026-09-16 15:23+07:00) Separated the Android toolchain and APK inputs from API-only and repository-only files.
 - [x] (2026-09-16 15:27+07:00) Added a deterministic deployment-impact classifier and regression checks for no-op, server-only, APK-affecting, and identical-tree merge changes.
-- [ ] Record the no-redeploy merge procedure in repository instructions and deployment documentation.
+- [x] (2026-09-16 15:39+07:00) Recorded the no-redeploy identical-tree merge procedure, deployment classification, and Coolify watch-path source of truth.
 - [ ] Run repository checks and validate Docker stage inputs.
 - [ ] Push the branch, configure Coolify watch paths through MCP, deploy the branch, and verify production health and APK delivery.
 

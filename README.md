@@ -50,11 +50,27 @@ https://translate.hetz.autismstaking.xyz/apk
 ```
 
 The route returns the Android APK media type and downloads the file as
-`thai-ai-translate.apk`. Deploying a new Git revision through Coolify rebuilds
-and replaces the artifact together with the web/API container. The first cold
-deployment is substantially slower than a web-only build because Gradle must
-compile React Native; Docker caches the pinned Android toolchain and Gradle
-dependencies for later builds.
+`thai-ai-translate.apk`. Docker gives the APK stage a deliberately narrow input
+set: client sources/assets, shared contracts, dependency metadata, and the APK
+build script. API-only deployments reuse the cached APK and do not run Gradle.
+Client or shared-contract changes rebuild and replace it. A cold Android build
+is substantially slower because Gradle must compile React Native; Docker caches
+the pinned Android toolchain, pnpm store, and Gradle dependencies for later
+builds.
+
+Coolify automatic deployments are limited to production inputs by the watch
+paths recorded in `config/deployment/coolify-watch-paths.txt`. Documentation,
+plans, tests, and local tooling do not deploy. Before a manual handoff or merge,
+classify the difference:
+
+```bash
+scripts/classify-deployment-change.sh BASE HEAD
+```
+
+The final line reports whether no deployment is needed, a server deployment can
+reuse the APK, or an APK rebuild is required. If an approved feature revision is
+already running and its tree is identical to the merge commit on `main`, switch
+the Coolify source branch to `main` without deploy, redeploy, or restart.
 
 This is an `arm64-v8a` sideloadable preview signed with the generated preview
 key. It is suitable for the existing Galaxy S22+ workflow, but it is not a

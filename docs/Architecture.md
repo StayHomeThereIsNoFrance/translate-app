@@ -130,14 +130,29 @@ HTTPS and routes `translate.hetz.autismstaking.xyz` to port 3000. One production
 container serves the exported Expo web files and `/api/*`, keeping browser
 requests same-origin.
 
-The Docker build has independent web/API and Android stages. The Android stage
-uses checksum-pinned official command-line tools, OpenJDK 17, Android SDK and
-Build Tools 36, NDK 27.1.12297006, and CMake 3.22.1. It runs the repository APK
-script with the production origin embedded through `EXPO_PUBLIC_API_BASE_URL`.
-Only `/tmp/thai-ai-translate.apk` crosses into the final Alpine runtime, where
-it is stored beside the static web export. Java and the multi-gigabyte Android
+The Docker build has independent web/API and Android dependency graphs. The
+Android toolchain inherits only the pnpm base, not API dependencies, and the APK
+builder copies only root dependency metadata, client sources and assets, shared
+contracts, and `scripts/build-apk.sh`. API source, tests, documentation, and
+repository tooling cannot invalidate its cache. Root lockfile or client/shared
+changes deliberately do invalidate it. The stage uses checksum-pinned official
+command-line tools, OpenJDK 17, Android SDK and Build Tools 36, NDK
+27.1.12297006, and CMake 3.22.1. It runs the repository APK script with the
+production origin embedded through `EXPO_PUBLIC_API_BASE_URL`. Only
+`/tmp/thai-ai-translate.apk` crosses into the final Alpine runtime, where it is
+stored beside the static web export. Java and the multi-gigabyte Android
 toolchain remain build-only. A four-worker Gradle limit bounds resource use,
-and a BuildKit cache preserves Gradle dependencies across source revisions.
+and BuildKit caches both pnpm and Gradle dependencies across source revisions.
+
+Coolify watch paths limit automatic Git deployments to production Docker,
+dependency, API, client, shared-contract, prompt, and APK-script inputs. Ordered
+negative patterns exclude Markdown, tests, and local-only configuration inside
+otherwise watched application directories. The checked-in source of truth is
+`config/deployment/coolify-watch-paths.txt`; the value is also stored on the
+Coolify application. `scripts/classify-deployment-change.sh` applies the same
+policy when comparing arbitrary revisions. An identical-tree merge from an
+already deployed feature branch to `main` needs only a Coolify branch-setting
+update and never a rebuild or restart.
 
 Fastify registers exact route `GET /apk` before its single-page-app fallback.
 The route sends `/app/web/thai-ai-translate.apk` as
@@ -164,10 +179,11 @@ intentionally separate concerns.
   and checks required vocabulary and gender particles without expecting an
   entirely deterministic model sentence.
 
-The root `pnpm verify` command runs lint, TypeScript checks, 37 unit tests,
-six desktop/mobile Playwright scenarios, and both production builds. Android
-Maestro and the live provider smoke test are explicit commands because they
-require an Android target and a provider credential. The S22+ workflow uses
+The root `pnpm verify` command runs lint, TypeScript checks, unit tests,
+deployment-policy regression tests, six desktop/mobile Playwright scenarios,
+and both production builds. Android Maestro and the live provider smoke test
+are explicit commands because they require an Android target and a provider
+credential. The S22+ workflow uses
 `pnpm deploy:android:s22` for build/install/launch and
 `pnpm test:e2e:android:s22` for the clean-state phrase test. One-time pairing is
 performed with `pnpm android:s22:pair -- HOST:PAIR_PORT`; ADB normally remembers
@@ -175,6 +191,7 @@ that trust relationship and reconnects through mDNS while both devices remain
 on the same Wi-Fi network.
 
 `pnpm build:apk` is also explicit because it requires Java 17 and Android SDK
-36 and takes several minutes. The Docker image runs the same script during each
-Coolify deployment, and production acceptance checks both `/healthz` and the
-binary response at `https://translate.hetz.autismstaking.xyz/apk`.
+36 and takes several minutes. A Coolify build runs the same script only when
+the APK-stage inputs changed; otherwise BuildKit reuses the existing artifact.
+Production acceptance checks both `/healthz` and the binary response at
+`https://translate.hetz.autismstaking.xyz/apk`.

@@ -3,6 +3,7 @@ README.md
 docs
 **/*.md
 **/LICENSE
+**/.gitignore
 node_modules
 **/node_modules
 **/.expo
