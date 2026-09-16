@@ -15,6 +15,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-29 01:11Z) Documented the operator and user workflow and completed repository and container verification: lint, type checking, 37 unit tests, web/API builds, local APK inspection, and native Coolify build/healthcheck all pass.
 - [x] (2026-08-29 01:12Z) Pushed the feature branch, switched the Coolify application to it through MCP, completed deployment `zyrr41o2q7dr2qb2eb2yclqm`, and verified the live APK response and artifact integrity.
 - [x] (2026-09-16 12:15Z) Diagnosed an Android Chrome download that remained at 100%, reproduced the conditional-cache response, deployed the no-store/no-validator fix through Coolify MCP, and verified conditional, range, and two consecutive emulated mobile downloads against production.
+- [x] (2026-09-16 13:15Z) After user approval, merged the feature into the repository's actual default branch `main`, switched the Coolify application back to `main`, completed deployment `rampkalyyulcicfgywi8vhd3`, and verified the public health and APK responses.
 
 ## Surprises & Discoveries
 
@@ -76,7 +77,7 @@ Coolify built and deployed commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8` suc
 
 On 2026-09-16 an Android Chrome download was observed remaining at 100%. Production logs and an HTTP reproduction showed that the original revalidation policy could return a bodyless `304` to a follow-up download navigation. Commit `1e735497b6ead985e2e62c6aa9c700fe8bdb7b84` disables storage and validators for `/apk`; Coolify deployment `52ycwhezrshutgv1x1vuhvdr` finished healthy. A production request carrying the old ETag and a future If-Modified-Since now returns a complete `200` response, byte-range resume still returns `206`, and two consecutive Pixel 7-emulated Chrome downloads both completed with the full file and matching digest. Repository lint, type checking, and all 37 unit tests pass after the fix.
 
-The one incomplete local experiment was the forced x86 Linux Docker build under ARM Mac emulation. It was deliberately cancelled after the Docker VM stopped making progress, then superseded by the successful native Coolify Linux build. No product acceptance criterion remains open. The application stays on the feature branch until the user approves merging it into the repository's actual default branch, `main`.
+The one incomplete local experiment was the forced x86 Linux Docker build under ARM Mac emulation. It was deliberately cancelled after the Docker VM stopped making progress, then superseded by the successful native Coolify Linux build. No product acceptance criterion remains open. After user approval, merge commit `0d47e75bc68f03f2c46afa2b798237919d46924b` was pushed to the repository's actual default branch, `main`; Coolify now tracks `main`, and the resulting rolling deployment completed healthy.
 
 ## Context and Orientation
 
@@ -233,6 +234,18 @@ Android Chrome cache-fix deployment:
     SHA-256: 6d132cdd66ca10751010d32c0b5c90c82fc64d5da4ffb464590e9321cb765d76
     health: HTTP 200
 
+Approved main-branch deployment:
+
+    merge commit: 0d47e75bc68f03f2c46afa2b798237919d46924b
+    deployment: rampkalyyulcicfgywi8vhd3
+    deployment status: finished
+    application status: running:healthy
+    Coolify branch: main
+    APK response: HTTP 200, 42583825 bytes
+    Cache-Control: no-store, max-age=0
+    SHA-256: 4dc03ada3f49bd169be2d7d684b8dc155d383beb8d6f37da906d3e9c2ea8cd29
+    health: HTTP 200
+
 The official Android download page listed command-line tools build `15859902` for Linux with SHA-256 `4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583` during design. Those exact values will be pinned in the Dockerfile.
 
 ## Interfaces and Dependencies
@@ -264,3 +277,5 @@ Revision note (2026-08-29 01:12Z): Marked all milestones complete after native C
 Revision note (2026-09-16 12:00Z): Reopened the plan for an Android Chrome 100%-download stall. Correlated the user screenshot with a live bodyless `304`, reproduced conditional and range requests, and recorded the tested decision to disable caching validators for this attachment while preserving resumable byte ranges.
 
 Revision note (2026-09-16 12:15Z): Closed the Android Chrome follow-up after successful deployment `52ycwhezrshutgv1x1vuhvdr`. Recorded the healthy rolling update, full `200` response to old validators, retained `206` range behavior, two complete emulated Pixel 7 downloads, artifact digest, and repository-wide verification.
+
+Revision note (2026-09-16 13:15Z): Recorded user approval, merge commit `0d47e75`, the switch from the feature branch to the actual repository default `main`, successful Coolify deployment `rampkalyyulcicfgywi8vhd3`, healthy application state, and final public APK verification.
