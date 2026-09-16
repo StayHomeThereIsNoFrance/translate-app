@@ -15,6 +15,7 @@ import Fastify, {
 } from 'fastify';
 
 import type { AppConfig } from './config.js';
+import { CachedTranslationService } from './translation-cache.js';
 import {
   TranslationProviderError,
   type TranslationService,
@@ -44,6 +45,7 @@ export async function buildApp({
   translator,
   logger = config.nodeEnv !== 'test',
 }: BuildAppOptions): Promise<FastifyInstance> {
+  const cachedTranslator = new CachedTranslationService(translator);
   const app = Fastify({
     logger,
     bodyLimit: 32 * 1024,
@@ -87,7 +89,7 @@ export async function buildApp({
       }
 
       try {
-        const result: ModelTranslation = await translator.translate(parsed.data);
+        const result: ModelTranslation = await cachedTranslator.translate(parsed.data);
         return {
           translation: result.translation,
           thaiText: result.thaiText,
