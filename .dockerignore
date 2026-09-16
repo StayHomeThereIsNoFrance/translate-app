@@ -1,7 +1,8 @@
 .git
 README.md
 docs
-**/*.md
+**/AGENTS.md
+**/CLAUDE.md
 **/LICENSE
 **/.gitignore
 node_modules

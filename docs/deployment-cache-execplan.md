@@ -32,6 +32,9 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 - Observation: the host Docker daemon is not running, so local Dockerfile validation cannot execute a native image build.
   Evidence: `docker build --check .` returns `Cannot connect to the Docker daemon`; structural cache-boundary tests pass, and the required native acceptance build will run on Coolify.
 
+- Observation: a global `**/*.md` Docker ignore rule also removed production prompts, whose source format is Markdown.
+  Evidence: the first native image built successfully, but deployment `dt51jtiqlzbsnlcodnbd3iov` failed healthcheck with `ENOENT /app/config/prompts/farang-ploy.md` and rolled back to the healthy previous container. The ignore rule was narrowed to `AGENTS.md` and `CLAUDE.md`, while the existing root `README.md` and `docs` exclusions remain.
+
 ## Decision Log
 
 - Decision: Keep one runtime container and one stable `/apk` route, but split Docker stages by their actual inputs.
@@ -113,3 +116,5 @@ If watch paths are saved incorrectly, restore the previous value `null` through 
 It exits zero for a successful classification and nonzero only for invalid arguments or Git errors.
 
 Revision note (2026-09-16): Created the plan after repository and production inspection, including isolation from another task's dirty worktree.
+
+Revision note (2026-09-16): Recorded and fixed the first native rollout's missing-prompt failure; added a regression assertion that production prompts cannot be excluded from the Docker context.

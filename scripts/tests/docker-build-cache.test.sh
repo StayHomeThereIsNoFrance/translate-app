@@ -4,6 +4,7 @@ set -euo pipefail
 
 readonly REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly DOCKERFILE="$REPOSITORY_ROOT/Dockerfile"
+readonly DOCKERIGNORE="$REPOSITORY_ROOT/.dockerignore"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -26,6 +27,12 @@ if grep -q 'COPY \. \.' <<<"$apk_stage"; then
 fi
 if grep -q 'apps/api' <<<"$apk_stage"; then
   fail 'API-only files must not be APK-stage inputs.'
+fi
+if grep -qxF '**/*.md' "$DOCKERIGNORE"; then
+  fail 'Docker context must not exclude Markdown production prompts.'
+fi
+if grep -q '^config/prompts' "$DOCKERIGNORE"; then
+  fail 'Docker context must include production prompts.'
 fi
 
 printf 'PASS: Docker APK cache boundaries\n'
