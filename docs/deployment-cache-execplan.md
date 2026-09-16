@@ -15,7 +15,7 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 - [x] (2026-09-16 15:23+07:00) Separated the Android toolchain and APK inputs from API-only and repository-only files.
 - [x] (2026-09-16 15:27+07:00) Added a deterministic deployment-impact classifier and regression checks for no-op, server-only, APK-affecting, and identical-tree merge changes.
 - [x] (2026-09-16 15:39+07:00) Recorded the no-redeploy identical-tree merge procedure, deployment classification, and Coolify watch-path source of truth.
-- [ ] Run repository checks and validate Docker stage inputs.
+- [x] (2026-09-16 15:43+07:00) Passed lint, type checking, 37 unit tests, deployment-policy regression tests, production web/API builds, shell syntax, and Docker stage-boundary assertions.
 - [ ] Push the branch, configure Coolify watch paths through MCP, deploy the branch, and verify production health and APK delivery.
 
 ## Surprises & Discoveries
@@ -53,6 +53,8 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 ## Outcomes & Retrospective
 
 Implementation and production evidence will be recorded here after validation.
+
+Repository implementation is complete and verified. The remaining work is the native Coolify feature-branch build, saved watch-path verification, and public endpoint smoke checks.
 
 ## Context and Orientation
 
