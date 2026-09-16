@@ -142,10 +142,12 @@ and a BuildKit cache preserves Gradle dependencies across source revisions.
 Fastify registers exact route `GET /apk` before its single-page-app fallback.
 The route sends `/app/web/thai-ai-translate.apk` as
 `application/vnd.android.package-archive`, names the attachment
-`thai-ai-translate.apk`, and requires cache revalidation so a stable URL does
-not leave devices on an old deployment. The artifact is the arm64 sideloaded
-preview build signed with Expo Prebuild's generated debug key; Google Play
-signing and `.aab` distribution are intentionally separate concerns.
+`thai-ai-translate.apk`, and disables browser storage plus the ETag and
+Last-Modified validators. This makes every navigation to the stable URL a full
+`200` download while retaining byte-range support for Android download resume.
+The artifact is the arm64 sideloaded preview build signed with Expo Prebuild's
+generated debug key; Google Play signing and `.aab` distribution are
+intentionally separate concerns.
 
 ## Verification
 

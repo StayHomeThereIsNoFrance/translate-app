@@ -14,6 +14,7 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - [x] (2026-08-29 01:11Z) Added the reusable APK build script, shared it with the S22+ workflow, and wired the pinned Android toolchain and artifact into the production Docker image; the native Linux image build completed successfully in Coolify.
 - [x] (2026-08-29 01:11Z) Documented the operator and user workflow and completed repository and container verification: lint, type checking, 37 unit tests, web/API builds, local APK inspection, and native Coolify build/healthcheck all pass.
 - [x] (2026-08-29 01:12Z) Pushed the feature branch, switched the Coolify application to it through MCP, completed deployment `zyrr41o2q7dr2qb2eb2yclqm`, and verified the live APK response and artifact integrity.
+- [ ] (2026-09-16 12:00Z) Diagnosed an Android Chrome download that remained at 100%, reproduced the conditional-cache response, and added a tested no-store/no-validator fix; remaining: deploy through Coolify MCP and repeat the mobile and conditional live checks.
 
 ## Surprises & Discoveries
 
@@ -38,6 +39,9 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - Observation: The same Docker build completed normally on Coolify's native Linux host, confirming that the local stall was an emulation limitation rather than an application or Gradle failure.
   Evidence: deployment `zyrr41o2q7dr2qb2eb2yclqm` built commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8`, completed its Docker image from 01:04:19Z to 01:10:30Z, passed the first container healthcheck, completed its rolling update, and ended with status `finished`.
 
+- Observation: Android Chrome can leave a completed APK download at 100% when the stable attachment URL is cached with validators and a follow-up navigation receives `304 Not Modified` without a response body.
+  Evidence: the user's screenshot at 18:52 shows `42.58 MB / 42.58 MB` while still marked `Downloading`; Coolify application logs at that time show the earlier full `GET /apk` completing with `200`, followed by a same-origin `GET /apk` completing with `304`. A direct Android-user-agent probe reproduced the `304` and zero-byte body when sending the published ETag, while fresh `200` and byte-range `206` responses transferred the expected bytes successfully.
+
 ## Decision Log
 
 - Decision: Build the APK inside a dedicated Docker build stage and copy only the final APK into the small Node runtime image.
@@ -51,6 +55,10 @@ After this change, an Android user can open `https://translate.hetz.autismstakin
 - Decision: Serve the APK through Fastify from the existing static directory at exact route `/apk`, with attachment filename `thai-ai-translate.apk`, Android APK media type, and revalidation caching.
   Rationale: This preserves the requested short stable URL, uses the existing one-container/same-origin architecture, and prevents the SPA fallback from returning HTML when the user expects a binary.
   Date/Author: 2026-08-28 / Codex
+
+- Decision: Supersede revalidation caching for `/apk` with `Cache-Control: no-store, max-age=0`, compatibility no-cache headers, and disabled ETag/Last-Modified validators while retaining range support.
+  Rationale: Installable binaries are infrequent manual downloads, and a full response is preferable to Android Chrome receiving a bodyless `304` while its download manager is finalizing the attachment. With validators disabled, even stale conditional headers produce `200` and the complete APK; byte ranges remain available for interrupted-transfer resume.
+  Date/Author: 2026-09-16 / Codex
 
 - Decision: Pin Android command-line tools, SDK 36, Build Tools 36.0.0, NDK 27.1.12297006, and CMake 3.22.1 in the Dockerfile.
   Rationale: A deployment build must be reproducible and must match the toolchain required by Expo SDK 57 and the generated Gradle project. The command-line-tools archive will be verified by its published SHA-256 checksum before extraction.
@@ -80,7 +88,7 @@ An APK, or Android Package, is an installable Android application archive. An An
 
 ## Plan of Work
 
-First, add an HTTP-level regression test to `apps/api/tests/app.test.ts`. It will create a temporary static directory containing an `index.html` fixture and small fake `thai-ai-translate.apk`, start `buildApp` with that directory, request `/apk`, and prove that the response is the fixture bytes with status 200, `application/vnd.android.package-archive`, attachment filename, and a cache policy that revalidates the stable URL. Then modify `apps/api/src/app.ts` after registering `@fastify/static` to register the exact route and send that filename. The existing SPA fallback remains unchanged for other non-API GET routes.
+First, add an HTTP-level regression test to `apps/api/tests/app.test.ts`. It will create a temporary static directory containing an `index.html` fixture and small fake `thai-ai-translate.apk`, start `buildApp` with that directory, request `/apk`, and prove that the response is the fixture bytes with status 200, `application/vnd.android.package-archive`, attachment filename, and a no-store policy without conditional validators. A second request carrying stale conditional headers must still return status 200 and the complete bytes. Then modify `apps/api/src/app.ts` after registering `@fastify/static` to register the exact route and send that filename. The existing SPA fallback remains unchanged for other non-API GET routes.
 
 Second, add `scripts/build-apk.sh`. The script will fail early unless Node major version 24, Java 17, and a usable Android SDK directory are present. It will default `EXPO_PUBLIC_API_BASE_URL` to the production HTTPS origin, run the existing client arm64 release build, copy the Gradle output to `dist/apk/thai-ai-translate.apk` or an explicit `APK_OUTPUT_PATH`, and print its byte count and SHA-256. Directory creation and copying will use commands available on both macOS and Debian Linux. Root `package.json` will expose the script as `pnpm build:apk` while preserving the lower-level client command and the S22+ install workflow.
 
@@ -216,7 +224,7 @@ The official Android download page listed command-line tools build `15859902` fo
 
 The root `package.json` exposes `build:apk` as `./scripts/build-apk.sh`. The existing `build:android` command remains the lower-level client build, and `scripts/android-s22.sh` remains responsible only for selecting, installing on, and testing a physical S22+.
 
-`apps/api/src/app.ts` registers `GET /apk` only when `config.staticDir` exists and static serving has been decorated. The handler sends static file `thai-ai-translate.apk` with media type `application/vnd.android.package-archive`, a `Content-Disposition` attachment name of `thai-ai-translate.apk`, and `Cache-Control: no-cache` so the stable URL revalidates after deployment.
+`apps/api/src/app.ts` registers `GET /apk` only when `config.staticDir` exists and static serving has been decorated. The handler sends static file `thai-ai-translate.apk` with media type `application/vnd.android.package-archive`, a `Content-Disposition` attachment name of `thai-ai-translate.apk`, and `Cache-Control: no-store, max-age=0`. Per-response `@fastify/static` options disable ETag, Last-Modified, and generated cache-control headers so stale conditional request headers cannot turn a new APK navigation into a bodyless `304`; range responses remain enabled.
 
 The Docker Android stage depends on Node 24, pnpm 10.19.0, OpenJDK 17, official Android command-line tools 15859902, platform/build tools 36/36.0.0, NDK 27.1.12297006, and CMake 3.22.1. The final runtime continues to depend only on Node 24 Alpine and curl.
 
@@ -235,3 +243,5 @@ Revision note (2026-08-29 01:00Z): Documented the direct URL, shared build comma
 Revision note (2026-08-29 01:10Z): Recorded the successful repository-wide verification (`pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build`, and `git diff --check`). Excluded README and documentation from the Docker build context so a post-deployment evidence-only plan update can reuse the verified application-image cache.
 
 Revision note (2026-08-29 01:12Z): Marked all milestones complete after native Coolify deployment and public endpoint verification. Recorded the deployed commit and deployment UUID, healthy rolling update, response headers, artifact digest and size, Android manifest metadata, ABI, ZIP integrity, and v2 signature result.
+
+Revision note (2026-09-16 12:00Z): Reopened the plan for an Android Chrome 100%-download stall. Correlated the user screenshot with a live bodyless `304`, reproduced conditional and range requests, and recorded the tested decision to disable caching validators for this attachment while preserving resumable byte ranges.
