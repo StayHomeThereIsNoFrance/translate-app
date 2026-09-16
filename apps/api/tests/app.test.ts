@@ -78,8 +78,24 @@ describe('translation API', () => {
       expect(response.headers['content-disposition']).toBe(
         'attachment; filename="thai-ai-translate.apk"',
       );
-      expect(response.headers['cache-control']).toBe('no-cache');
+      expect(response.headers['cache-control']).toBe('no-store, max-age=0');
+      expect(response.headers.pragma).toBe('no-cache');
+      expect(response.headers.expires).toBe('0');
+      expect(response.headers.etag).toBeUndefined();
+      expect(response.headers['last-modified']).toBeUndefined();
       expect(response.rawPayload).toEqual(apk);
+
+      const conditionalResponse = await app.inject({
+        method: 'GET',
+        url: '/apk',
+        headers: {
+          'if-none-match': 'W/"cached-apk"',
+          'if-modified-since': 'Wed, 31 Dec 2099 23:59:59 GMT',
+        },
+      });
+
+      expect(conditionalResponse.statusCode).toBe(200);
+      expect(conditionalResponse.rawPayload).toEqual(apk);
     } finally {
       await app.close();
       rmSync(staticDir, { recursive: true, force: true });
