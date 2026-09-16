@@ -15,6 +15,7 @@
     "build:web": "pnpm --filter @thai-translate/client build:web",
     "build:api": "pnpm --filter @thai-translate/api build",
     "build:android": "pnpm --filter @thai-translate/client build:android",
+    "build:apk": "./scripts/build-apk.sh",
     "android:s22:status": "./scripts/android-s22.sh status",
     "android:s22:pair": "./scripts/android-s22.sh pair",
     "android:s22:connect": "./scripts/android-s22.sh connect",

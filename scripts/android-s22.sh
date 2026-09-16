@@ -6,7 +6,7 @@ readonly APP_ID='xyz.autismstaking.thaitranslate'
 readonly DEFAULT_API_BASE_URL='https://translate.hetz.autismstaking.xyz'
 readonly MODEL_PREFIX='SM-S906'
 readonly REPOSITORY_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly APK_PATH="$REPOSITORY_ROOT/apps/client/android/app/build/outputs/apk/release/app-release.apk"
+readonly APK_PATH="$REPOSITORY_ROOT/dist/apk/thai-ai-translate.apk"
 readonly MAESTRO_FLOW="$REPOSITORY_ROOT/.maestro/translate-s22.yml"
 readonly E2E_SCREEN_TIMEOUT_MS='600000'
 
@@ -129,50 +129,10 @@ show_status() {
   printf 'Selected Galaxy S22+: %s (model %s)\n' "$serial" "$model"
 }
 
-configure_android_build_environment() {
-  local node24_bin='/opt/homebrew/opt/node@24/bin'
-  local android_studio_jdk='/Applications/Android Studio.app/Contents/jbr/Contents/Home'
-  local user_home_directory
-
-  if [[ -x "$node24_bin/node" ]]; then
-    export PATH="$node24_bin:$PATH"
-  fi
-  require_command node
-  require_command pnpm
-  [[ "$(node -p 'process.versions.node.split(".")[0]')" == '24' ]] ||
-    fail 'Android builds require Node 24. Select Node 24 and retry.'
-
-  if [[ -z "${JAVA_HOME:-}" && -x "$android_studio_jdk/bin/java" ]]; then
-    export JAVA_HOME="$android_studio_jdk"
-  fi
-  [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]] ||
-    fail 'Java 17 was not found. Set JAVA_HOME to a JDK 17 installation.'
-  [[ "$("$JAVA_HOME/bin/java" -version 2>&1 | awk -F\" '/version/ { print $2; exit }')" == 17.* ]] ||
-    fail 'JAVA_HOME must point to JDK 17.'
-
-  if [[ -z "${ANDROID_HOME:-}" ]]; then
-    if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
-      export ANDROID_HOME="$ANDROID_SDK_ROOT"
-    else
-      user_home_directory="$(dscacheutil -q user -a name "$(id -un)" | awk '/^dir:/ { print $2; exit }')"
-      [[ -n "$user_home_directory" ]] || fail 'Could not determine the macOS user directory for Android SDK discovery.'
-      export ANDROID_HOME="$user_home_directory/Library/Android/sdk"
-    fi
-  fi
-  [[ -d "$ANDROID_HOME" ]] ||
-    fail "Android SDK was not found at '$ANDROID_HOME'. Set ANDROID_HOME and retry."
-  export ANDROID_SDK_ROOT="$ANDROID_HOME"
-}
-
 build_release_apk() {
-  configure_android_build_environment
-  export EXPO_PUBLIC_API_BASE_URL="${EXPO_PUBLIC_API_BASE_URL:-$DEFAULT_API_BASE_URL}"
-
-  printf 'Building arm64 release APK for API %s\n' "$EXPO_PUBLIC_API_BASE_URL"
-  (
-    cd "$REPOSITORY_ROOT"
-    pnpm build:android
-  )
+  APK_OUTPUT_PATH="$APK_PATH" \
+    EXPO_PUBLIC_API_BASE_URL="${EXPO_PUBLIC_API_BASE_URL:-$DEFAULT_API_BASE_URL}" \
+    "$REPOSITORY_ROOT/scripts/build-apk.sh"
   [[ -f "$APK_PATH" ]] || fail "Android build completed without producing '$APK_PATH'."
 }
 

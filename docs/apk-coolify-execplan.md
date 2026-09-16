@@ -1,0 +1,266 @@
+# Publish the Android APK from Coolify at a stable direct URL
+
+This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds. Maintain this document in accordance with `docs/PLANS.md`.
+
+## Purpose / Big Picture
+
+After this change, an Android user can open `https://translate.hetz.autismstaking.xyz/apk` and download the current installable Thai AI Translate preview APK directly. The APK is built from the same Git revision as the web/API container during the Coolify Docker deployment, so publishing a new application revision also refreshes the download without checking a binary into Git or transferring it through SSH. A repository script provides the one reproducible APK build entry point used both by developers and by the Docker build.
+
+## Progress
+
+- [x] (2026-08-28 23:56Z) Created `codex/apk-coolify-download` from the clean `main` branch and inspected repository, Android, Docker, API static-file, and current Coolify application configuration.
+- [x] (2026-08-28 23:56Z) Read the Expo SDK 57 reference and current official Expo Android APK/local-production guidance before designing the implementation.
+- [x] (2026-08-28 23:59Z) Added and tested the direct APK HTTP route; all 20 API tests and API type checking pass under Node 24.
+- [x] (2026-08-29 01:11Z) Added the reusable APK build script, shared it with the S22+ workflow, and wired the pinned Android toolchain and artifact into the production Docker image; the native Linux image build completed successfully in Coolify.
+- [x] (2026-08-29 01:11Z) Documented the operator and user workflow and completed repository and container verification: lint, type checking, 37 unit tests, web/API builds, local APK inspection, and native Coolify build/healthcheck all pass.
+- [x] (2026-08-29 01:12Z) Pushed the feature branch, switched the Coolify application to it through MCP, completed deployment `zyrr41o2q7dr2qb2eb2yclqm`, and verified the live APK response and artifact integrity.
+- [x] (2026-09-16 12:15Z) Diagnosed an Android Chrome download that remained at 100%, reproduced the conditional-cache response, deployed the no-store/no-validator fix through Coolify MCP, and verified conditional, range, and two consecutive emulated mobile downloads against production.
+
+## Surprises & Discoveries
+
+- Observation: The production Coolify resource uses the root `Dockerfile` directly, not `docker-compose.coolify.yml`.
+  Evidence: Coolify application `ek2k3scxtyw65x3a6csxs0tu` reports build pack `dockerfile`, Dockerfile location `/Dockerfile`, exposed port `3000`, branch `main`, and healthy status.
+
+- Observation: Expo Prebuild currently generates a release build signed by the generated debug keystore, which is appropriate for the repository's existing sideloaded preview APK but not for Google Play distribution.
+  Evidence: `apps/client/android/app/build.gradle` assigns `signingConfigs.debug` to the `release` build type, and the existing physical-device workflow describes the output as a preview APK.
+
+- Observation: Expo SDK 57 uses Android compile and target SDK 36, while the generated React Native build also needs NDK `27.1.12297006` and local builds use CMake `3.22.1`.
+  Evidence: the versioned Expo SDK reference lists compile/target 36; generated Gradle properties report build tools `36.0.0`, compile SDK 36, target SDK 36, and NDK `27.1.12297006`; the validated local SDK contains CMake `3.22.1`.
+
+- Observation: The interactive shell defaults to Node 26 even though this workspace requires Node 24, and `@fastify/static` replaces a custom cache header unless cache-control generation is disabled for that `sendFile` call.
+  Evidence: the first pnpm attempt stopped with `Expected version: >=24 <25, Got: v26.7.0`; the first route test received `public, max-age=0` until `sendFile` was passed `{ cacheControl: false }`. Node 24.18.0 is available at `/opt/homebrew/opt/node@24/bin`.
+
+- Observation: The first full local APK run reached final release tasks but Android Studio's macOS ARM JDK 17.0.10 crashed inside its C1 JIT compiler rather than reporting a Gradle or source error.
+  Evidence: `hs_err_pid85336.log` reports `Internal Error (assembler_aarch64.hpp:267)`, `Field too big for insn`, and current thread `C1 CompilerThread0` after 14 minutes 41 seconds. The script now disables tiered compilation only for that exact macOS JDK 17.0.10 family; the Debian Docker stage uses its current OpenJDK 17 package.
+
+- Observation: A forced `linux/amd64` Docker build on the ARM Mac validated the complete pinned Android toolchain layer and Expo Prebuild, but cross-architecture Gradle stopped producing output while the Docker VM became nearly idle, so the emulated build was cancelled after 33 minutes rather than treated as success.
+  Evidence: the build verified the command-line-tools SHA-256, installed SDK 36, Build Tools 36.0.0, NDK 27.1.12297006 and CMake 3.22.1, finished the web/API builder, and reached the Gradle 9.3.1 daemon. It then produced no task output for about 20 minutes; the Docker VM fell from roughly 171% to 1.6% CPU and even read-only BuildKit history calls stalled. The terminal result was explicitly `Canceled: context canceled`.
+
+- Observation: The same Docker build completed normally on Coolify's native Linux host, confirming that the local stall was an emulation limitation rather than an application or Gradle failure.
+  Evidence: deployment `zyrr41o2q7dr2qb2eb2yclqm` built commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8`, completed its Docker image from 01:04:19Z to 01:10:30Z, passed the first container healthcheck, completed its rolling update, and ended with status `finished`.
+
+- Observation: Android Chrome can leave a completed APK download at 100% when the stable attachment URL is cached with validators and a follow-up navigation receives `304 Not Modified` without a response body.
+  Evidence: the user's screenshot at 18:52 shows `42.58 MB / 42.58 MB` while still marked `Downloading`; Coolify application logs at that time show the earlier full `GET /apk` completing with `200`, followed by a same-origin `GET /apk` completing with `304`. A direct Android-user-agent probe reproduced the `304` and zero-byte body when sending the published ETag, while fresh `200` and byte-range `206` responses transferred the expected bytes successfully.
+
+## Decision Log
+
+- Decision: Build the APK inside a dedicated Docker build stage and copy only the final APK into the small Node runtime image.
+  Rationale: Coolify deploys from Git, so a local-only APK does not exist in the remote build context. Building in the Docker stage makes the artifact correspond to the deployed revision, avoids committing a roughly 41 MB binary, and keeps Java and Android SDK tooling out of the runtime image.
+  Date/Author: 2026-08-28 / Codex
+
+- Decision: Keep the published APK arm64-only and signed as the existing preview build is signed.
+  Rationale: The repository already validates the arm64 artifact on the target Galaxy S22+ and explicitly treats it as sideloaded preview distribution. Changing ABI scope or release credentials would expand the request and introduce signing-secret management.
+  Date/Author: 2026-08-28 / Codex
+
+- Decision: Serve the APK through Fastify from the existing static directory at exact route `/apk`, with attachment filename `thai-ai-translate.apk`, Android APK media type, and revalidation caching.
+  Rationale: This preserves the requested short stable URL, uses the existing one-container/same-origin architecture, and prevents the SPA fallback from returning HTML when the user expects a binary.
+  Date/Author: 2026-08-28 / Codex
+
+- Decision: Supersede revalidation caching for `/apk` with `Cache-Control: no-store, max-age=0`, compatibility no-cache headers, and disabled ETag/Last-Modified validators while retaining range support.
+  Rationale: Installable binaries are infrequent manual downloads, and a full response is preferable to Android Chrome receiving a bodyless `304` while its download manager is finalizing the attachment. With validators disabled, even stale conditional headers produce `200` and the complete APK; byte ranges remain available for interrupted-transfer resume.
+  Date/Author: 2026-09-16 / Codex
+
+- Decision: Pin Android command-line tools, SDK 36, Build Tools 36.0.0, NDK 27.1.12297006, and CMake 3.22.1 in the Dockerfile.
+  Rationale: A deployment build must be reproducible and must match the toolchain required by Expo SDK 57 and the generated Gradle project. The command-line-tools archive will be verified by its published SHA-256 checksum before extraction.
+  Date/Author: 2026-08-28 / Codex
+
+- Decision: Cap Gradle at four workers, disable its persistent daemon for release commands, and mount `/root/.gradle` as a BuildKit cache in the APK stage.
+  Rationale: Coolify permits two concurrent builds and the generated native project otherwise fans out across every CPU. A bounded single-build worker count makes resource use predictable, the one-shot daemon cannot leak beyond the image step, and the cache avoids downloading Gradle dependencies again whenever application source invalidates the APK layer.
+  Date/Author: 2026-08-29 / Codex
+
+## Outcomes & Retrospective
+
+The feature is complete on `codex/apk-coolify-download`. The repository now has one reproducible `pnpm build:apk` entry point; Coolify builds the arm64 preview APK in a dedicated Android stage and copies only the artifact into the Node runtime; and Fastify publishes it from the stable exact route `GET /apk` without allowing the SPA fallback to substitute HTML.
+
+Coolify built and deployed commit `94a6640007f7fa9db678d8ddfa15c8b1c69801e8` successfully. The replacement container passed its first `/healthz` check and the application reports `running:healthy` from the feature branch. A fresh public download returned HTTP 200 with the expected APK media type, attachment filename, and no-cache policy. The 42,583,825-byte file passed ZIP integrity and APK Signature Scheme v2 verification and reports the expected package, version, SDK levels, and arm64 ABI.
+
+On 2026-09-16 an Android Chrome download was observed remaining at 100%. Production logs and an HTTP reproduction showed that the original revalidation policy could return a bodyless `304` to a follow-up download navigation. Commit `1e735497b6ead985e2e62c6aa9c700fe8bdb7b84` disables storage and validators for `/apk`; Coolify deployment `52ycwhezrshutgv1x1vuhvdr` finished healthy. A production request carrying the old ETag and a future If-Modified-Since now returns a complete `200` response, byte-range resume still returns `206`, and two consecutive Pixel 7-emulated Chrome downloads both completed with the full file and matching digest. Repository lint, type checking, and all 37 unit tests pass after the fix.
+
+The one incomplete local experiment was the forced x86 Linux Docker build under ARM Mac emulation. It was deliberately cancelled after the Docker VM stopped making progress, then superseded by the successful native Coolify Linux build. No product acceptance criterion remains open. The application stays on the feature branch until the user approves merging it into the repository's actual default branch, `main`.
+
+## Context and Orientation
+
+The repository is a pnpm workspace rooted at `/Users/j/translate-app`. `apps/client` is an Expo SDK 57 React Native application. Its native `apps/client/android` directory is generated by Expo Prebuild and ignored by Git. The current `build:android` package command runs Prebuild, invokes Gradle `assembleRelease`, and produces `apps/client/android/app/build/outputs/apk/release/app-release.apk` for the `arm64-v8a` CPU architecture.
+
+`apps/api/src/app.ts` creates the Fastify HTTP server. In production it registers `@fastify/static` with the directory configured by `STATIC_DIR`, serves the exported web application from that directory, and falls back to `index.html` for non-API browser routes. The Docker runtime sets `STATIC_DIR=/app/web`. The new APK will also live in `/app/web`, but `/apk` needs an explicit route so the fallback can never substitute the web application.
+
+The root `Dockerfile` currently has one Node 24 Alpine builder that installs pnpm dependencies, builds web/API output, and deploys production API dependencies, followed by a small Node 24 Alpine runtime. Coolify application `ek2k3scxtyw65x3a6csxs0tu` builds this file from the Git branch recorded in the application configuration and exposes the container on `https://translate.hetz.autismstaking.xyz`.
+
+An APK, or Android Package, is an installable Android application archive. An Android NDK is the native development kit used to compile the C++ portion of React Native. CMake is the native build generator used by that NDK build. These large build-only tools must not be copied into the production runtime layer.
+
+## Plan of Work
+
+First, add an HTTP-level regression test to `apps/api/tests/app.test.ts`. It will create a temporary static directory containing an `index.html` fixture and small fake `thai-ai-translate.apk`, start `buildApp` with that directory, request `/apk`, and prove that the response is the fixture bytes with status 200, `application/vnd.android.package-archive`, attachment filename, and a no-store policy without conditional validators. A second request carrying stale conditional headers must still return status 200 and the complete bytes. Then modify `apps/api/src/app.ts` after registering `@fastify/static` to register the exact route and send that filename. The existing SPA fallback remains unchanged for other non-API GET routes.
+
+Second, add `scripts/build-apk.sh`. The script will fail early unless Node major version 24, Java 17, and a usable Android SDK directory are present. It will default `EXPO_PUBLIC_API_BASE_URL` to the production HTTPS origin, run the existing client arm64 release build, copy the Gradle output to `dist/apk/thai-ai-translate.apk` or an explicit `APK_OUTPUT_PATH`, and print its byte count and SHA-256. Directory creation and copying will use commands available on both macOS and Debian Linux. Root `package.json` will expose the script as `pnpm build:apk` while preserving the lower-level client command and the S22+ install workflow.
+
+Third, restructure the root `Dockerfile` around shared Node dependencies. A Debian-based Android builder will install OpenJDK 17 and the checksum-pinned official Android command-line tools, accept licenses non-interactively, and install only the SDK/NDK/CMake packages required by the generated project. It will call the repository APK script with `/tmp/thai-ai-translate.apk` as output. The ordinary web/API builder remains separate so its outputs and API production dependency deployment are clear. The final Alpine runtime receives only the API, web export, prompts, and APK; a build-time file check makes a missing or empty APK fail the deployment rather than serving a false success.
+
+Fourth, update `README.md`, `docs/Architecture.md`, and this plan to explain the public URL, build command, architecture, preview-signing limitation, and deployment behavior. Run shell syntax validation, API tests, lint, type checking, unit tests, web/API builds, the local APK script, and a full local Docker build. Exercise the built container without starting the web UI as an application-development shortcut; a bounded container smoke test may request health and `/apk` only.
+
+Finally, commit and push each completed milestone. Through Coolify MCP, update only the target application's Git branch to `codex/apk-coolify-download`, trigger and wait for a deployment, inspect the deployment and health state, and verify the public response. The live acceptance check downloads the artifact, confirms an HTTP 200 response, content type and disposition, validates it as a ZIP/APK, and records size and SHA-256. The application remains on the feature branch until the user approves merging; after approval, use the repository's actual default branch `main` unless the user directs creation of a separate `master` branch.
+
+## Concrete Steps
+
+Run all repository commands from `/Users/j/translate-app`.
+
+The working branch already exists:
+
+    git switch codex/apk-coolify-download
+
+After implementing the API route, run:
+
+    pnpm --filter @thai-translate/api test
+    pnpm --filter @thai-translate/api typecheck
+
+The new route test must pass and prove that `/apk` returns fixture bytes instead of `index.html`.
+
+After implementing the build script, run:
+
+    bash -n scripts/build-apk.sh
+    pnpm build:apk
+
+The command must end by identifying `dist/apk/thai-ai-translate.apk`, a nonzero byte size, and a SHA-256 digest. The current expected order of magnitude is 41 MB; exact bytes and digest can change with source revisions and build tooling.
+
+Build the complete deployment image from the repository root:
+
+    docker build -t thai-ai-translate:apk-test .
+
+Inspect the image rather than trusting a successful layer alone:
+
+    docker run --rm --entrypoint sh thai-ai-translate:apk-test -c 'test -s /app/web/thai-ai-translate.apk'
+
+Run standard repository verification in proportion to the change:
+
+    pnpm lint
+    pnpm typecheck
+    pnpm test:unit
+    pnpm build
+    git diff --check
+
+Before Coolify deployment, push the branch:
+
+    git push -u origin codex/apk-coolify-download
+
+Use Coolify MCP to update application `ek2k3scxtyw65x3a6csxs0tu` to the feature branch and deploy it. Do not use a browser, direct Coolify API, CLI, SSH, or the Coolify web interface.
+
+After MCP reports a healthy completed deployment, download the public artifact to a temporary path and inspect headers and bytes:
+
+    curl --fail --location --dump-header /tmp/thai-ai-translate.headers --output /tmp/thai-ai-translate.apk https://translate.hetz.autismstaking.xyz/apk
+    file /tmp/thai-ai-translate.apk
+    shasum -a 256 /tmp/thai-ai-translate.apk
+
+The response must be HTTP 200, use `application/vnd.android.package-archive`, offer `thai-ai-translate.apk` as an attachment, and contain a valid Android APK rather than HTML.
+
+## Validation and Acceptance
+
+`pnpm build:apk` is accepted when it runs the existing Expo Prebuild plus Gradle release build, targets the production HTTPS API by default, emits the normalized artifact path, and fails if the expected Gradle output is absent or empty. It must be possible to override only the non-secret API origin and output path through `EXPO_PUBLIC_API_BASE_URL` and `APK_OUTPUT_PATH`.
+
+The API is accepted when a test request to `/apk` returns the exact fixture bytes with status 200 and download headers, while existing health and translation tests continue to pass. The Docker image is accepted when `/app/web/thai-ai-translate.apk` exists and the final image contains no Java compiler or Android SDK directory.
+
+The deployed feature is accepted only when Coolify MCP reports application `ek2k3scxtyw65x3a6csxs0tu` running healthy from `codex/apk-coolify-download`, its deployment ends with `finished`, and `https://translate.hetz.autismstaking.xyz/apk` returns an actual nonempty APK with the expected media type and attachment name. The main site health check must remain HTTP 200 after adding the much longer Android build stage.
+
+## Idempotence and Recovery
+
+The APK script is safe to rerun: Expo regenerates the ignored Android project and the final copy replaces only the requested artifact path. Docker builds are layered and safe to retry after network or Gradle dependency failures. No binary, signing password, SDK license data, or generated native directory is committed.
+
+If the Android tool archive checksum changes, do not bypass verification. Confirm a new version and checksum from the official Android download page, update both pinned values together, and rerun the image build. If Gradle reports a missing SDK package, compare the version against generated Gradle properties before adding the exact package to the Android build stage.
+
+If the Coolify deployment fails, inspect its bounded deployment log through Coolify MCP, fix the branch, push a new commit, and redeploy. If the application becomes unhealthy, use Coolify MCP to restore `git_branch` to `main` and deploy the last accepted revision; do not use direct server access. A failed feature deployment must not be described as published.
+
+## Artifacts and Notes
+
+Initial validated local APK:
+
+    path: apps/client/android/app/build/outputs/apk/release/app-release.apk
+    size: approximately 41 MiB
+    SHA-256: 5e1cf3e48413f870d3455c015d95fe2602de3f162781d8889e6e408d113614a9
+
+Validated output from the new build script after the JDK-specific retry:
+
+    Gradle result: BUILD SUCCESSFUL in 7m 7s, 576 actionable tasks
+    path: dist/apk/thai-ai-translate.apk
+    bytes: 42583829
+    SHA-256: eaa9ebe2882a3fa45821d276a2cdc4c684fb707cf50c56d5f193be0fce5c8079
+    package: xyz.autismstaking.thaitranslate
+    version: 1.1.0 (versionCode 2)
+    min/target/compile SDK: 24/36/36
+    ABI: arm64-v8a
+    signing: APK Signature Scheme v2 verified, one signer
+    ZIP integrity: no errors
+
+Initial Coolify state:
+
+    application: ek2k3scxtyw65x3a6csxs0tu (thai-ai-translate)
+    branch: main
+    status: running:healthy
+    domain: https://translate.hetz.autismstaking.xyz
+    build pack: dockerfile, /Dockerfile
+
+Successful Coolify deployment and public artifact:
+
+    deployment: zyrr41o2q7dr2qb2eb2yclqm
+    deployed commit: 94a6640007f7fa9db678d8ddfa15c8b1c69801e8
+    deployment status: finished
+    application status: running:healthy
+    branch: codex/apk-coolify-download
+    URL: https://translate.hetz.autismstaking.xyz/apk
+    HTTP: 200
+    Content-Type: application/vnd.android.package-archive
+    Content-Disposition: attachment; filename="thai-ai-translate.apk"
+    Cache-Control: no-cache
+    bytes: 42583825
+    SHA-256: 9dfd71a07c1b7ae42c95ce28f38b8af77d151047cc15f13b7f1d9ec20e641f21
+    package: xyz.autismstaking.thaitranslate
+    version: 1.1.0 (versionCode 2)
+    min/target/compile SDK: 24/36/36
+    ABI: arm64-v8a
+    signing: APK Signature Scheme v2 verified, one signer
+    ZIP integrity: no errors
+
+Android Chrome cache-fix deployment:
+
+    deployment: 52ycwhezrshutgv1x1vuhvdr
+    deployed commit: 1e735497b6ead985e2e62c6aa9c700fe8bdb7b84
+    deployment status: finished
+    application status: running:healthy
+    branch: codex/apk-coolify-download
+    Cache-Control: no-store, max-age=0
+    ETag / Last-Modified: absent
+    conditional request with old validators: HTTP 200, 42583825 bytes
+    range request: HTTP 206, correct Content-Range
+    two consecutive mobile-Chrome downloads: HTTP 200, complete
+    SHA-256: 6d132cdd66ca10751010d32c0b5c90c82fc64d5da4ffb464590e9321cb765d76
+    health: HTTP 200
+
+The official Android download page listed command-line tools build `15859902` for Linux with SHA-256 `4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583` during design. Those exact values will be pinned in the Dockerfile.
+
+## Interfaces and Dependencies
+
+`scripts/build-apk.sh` is an executable Bash script with no positional arguments. Its environment interface is `EXPO_PUBLIC_API_BASE_URL` for the non-secret API origin and `APK_OUTPUT_PATH` for the normalized artifact destination. It calls the existing pnpm client build, expects Gradle output at `apps/client/android/app/build/outputs/apk/release/app-release.apk`, and prints the final path, byte count, and SHA-256.
+
+The root `package.json` exposes `build:apk` as `./scripts/build-apk.sh`. The existing `build:android` command remains the lower-level client build, and `scripts/android-s22.sh` remains responsible only for selecting, installing on, and testing a physical S22+.
+
+`apps/api/src/app.ts` registers `GET /apk` only when `config.staticDir` exists and static serving has been decorated. The handler sends static file `thai-ai-translate.apk` with media type `application/vnd.android.package-archive`, a `Content-Disposition` attachment name of `thai-ai-translate.apk`, and `Cache-Control: no-store, max-age=0`. Per-response `@fastify/static` options disable ETag, Last-Modified, and generated cache-control headers so stale conditional request headers cannot turn a new APK navigation into a bodyless `304`; range responses remain enabled.
+
+The Docker Android stage depends on Node 24, pnpm 10.19.0, OpenJDK 17, official Android command-line tools 15859902, platform/build tools 36/36.0.0, NDK 27.1.12297006, and CMake 3.22.1. The final runtime continues to depend only on Node 24 Alpine and curl.
+
+Revision note (2026-08-28 23:56Z): Created the initial self-contained plan after repository inspection, exact Expo SDK 57 documentation review, generated Gradle toolchain inspection, and read-only Coolify MCP discovery. It records the server-side Docker build decision because the Coolify Git build cannot see an ignored local APK and direct non-MCP artifact transfer is prohibited.
+
+Revision note (2026-08-28 23:59Z): Recorded the local Node version mismatch and Fastify static cache-header behavior discovered by the first API test run. The route disables the plugin's generated cache header on that response so the stable download URL can explicitly require revalidation.
+
+Revision note (2026-08-29 00:12Z): Recorded the first local APK attempt and its macOS ARM JDK 17.0.10 C1 compiler crash. Added a narrowly scoped `-XX:-TieredCompilation` workaround for that JDK so source or Gradle failures remain distinguishable, while the Coolify Linux build continues on current Debian OpenJDK 17.
+
+Revision note (2026-08-29 00:20Z): Recorded the successful retry through the new script, including package metadata, v2 signature verification, ZIP integrity, size, and digest. Marked the build milestone partially complete pending the independent Linux Docker image build.
+
+Revision note (2026-08-29 00:56Z): Recorded the bounded cross-architecture Docker attempt accurately: Linux toolchain and Expo Prebuild passed, but the emulated Gradle process was cancelled after the Docker VM became nearly idle. Added a four-worker one-shot Gradle policy and persistent BuildKit Gradle cache before the required native Coolify deployment verification.
+
+Revision note (2026-08-29 01:00Z): Documented the direct URL, shared build command, Docker stage boundaries, stable-route headers, cold-build expectations, arm64 scope, and preview-signing limitation in the user guide, architecture, and original delivery plan.
+
+Revision note (2026-08-29 01:10Z): Recorded the successful repository-wide verification (`pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm build`, and `git diff --check`). Excluded README and documentation from the Docker build context so a post-deployment evidence-only plan update can reuse the verified application-image cache.
+
+Revision note (2026-08-29 01:12Z): Marked all milestones complete after native Coolify deployment and public endpoint verification. Recorded the deployed commit and deployment UUID, healthy rolling update, response headers, artifact digest and size, Android manifest metadata, ABI, ZIP integrity, and v2 signature result.
+
+Revision note (2026-09-16 12:00Z): Reopened the plan for an Android Chrome 100%-download stall. Correlated the user screenshot with a live bodyless `304`, reproduced conditional and range requests, and recorded the tested decision to disable caching validators for this attachment while preserving resumable byte ranges.
+
+Revision note (2026-09-16 12:15Z): Closed the Android Chrome follow-up after successful deployment `52ycwhezrshutgv1x1vuhvdr`. Recorded the healthy rolling update, full `200` response to old validators, retained `206` range behavior, two complete emulated Pixel 7 downloads, artifact digest, and repository-wide verification.
