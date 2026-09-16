@@ -12,8 +12,8 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 
 - [x] (2026-09-16 15:05+07:00) Inspected the production Docker graph, repository build commands, current Coolify application, and the dirty worktree belonging to another task.
 - [x] (2026-09-16 15:06+07:00) Created isolated branch `codex/deployment-path-caching` in a separate worktree based on clean `main`.
-- [ ] Separate the Android toolchain and APK inputs from API-only and repository-only files.
-- [ ] Add a deterministic deployment-impact classifier and regression checks for no-op, server-only, and APK-affecting changes.
+- [x] (2026-09-16 15:23+07:00) Separated the Android toolchain and APK inputs from API-only and repository-only files.
+- [x] (2026-09-16 15:27+07:00) Added a deterministic deployment-impact classifier and regression checks for no-op, server-only, APK-affecting, and identical-tree merge changes.
 - [ ] Record the no-redeploy merge procedure in repository instructions and deployment documentation.
 - [ ] Run repository checks and validate Docker stage inputs.
 - [ ] Push the branch, configure Coolify watch paths through MCP, deploy the branch, and verify production health and APK delivery.
@@ -28,6 +28,9 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 
 - Observation: production already has Docker build caching enabled and automatic Git deployment enabled, but no watch paths.
   Evidence: Coolify application `ek2k3scxtyw65x3a6csxs0tu` reports `disable_build_cache: false`, `is_auto_deploy_enabled: true`, and `watch_paths: null`.
+
+- Observation: the host Docker daemon is not running, so local Dockerfile validation cannot execute a native image build.
+  Evidence: `docker build --check .` returns `Cannot connect to the Docker daemon`; structural cache-boundary tests pass, and the required native acceptance build will run on Coolify.
 
 ## Decision Log
 
