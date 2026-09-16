@@ -35,6 +35,9 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 - Observation: a global `**/*.md` Docker ignore rule also removed production prompts, whose source format is Markdown.
   Evidence: the first native image built successfully, but deployment `dt51jtiqlzbsnlcodnbd3iov` failed healthcheck with `ENOENT /app/config/prompts/farang-ploy.md` and rolled back to the healthy previous container. The ignore rule was narrowed to `AGENTS.md` and `CLAUDE.md`, while the existing root `README.md` and `docs` exclusions remain.
 
+- Observation: the saved Coolify watch paths suppress a real documentation-only push.
+  Evidence: commit `c7af7ba` changed only `AGENTS.md` and this ExecPlan; the classifier returned `deployment=none apk=none`. After the push, the application still had 14 deployment records and the newest remained finished deployment `rsqilb2djstzoyp5yls8k8a3` for the earlier production commit `77eff665`; no webhook deployment was created.
+
 ## Decision Log
 
 - Decision: Keep one runtime container and one stable `/apk` route, but split Docker stages by their actual inputs.
@@ -122,3 +125,5 @@ It exits zero for a successful classification and nonzero only for invalid argum
 Revision note (2026-09-16): Created the plan after repository and production inspection, including isolation from another task's dirty worktree.
 
 Revision note (2026-09-16): Recorded and fixed the first native rollout's missing-prompt failure; added a regression assertion that production prompts cannot be excluded from the Docker context.
+
+Revision note (2026-09-16): Recorded the successful production rollout, public endpoint checks, and real documentation-only watch-path suppression.
