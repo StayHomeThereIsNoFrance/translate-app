@@ -11,7 +11,9 @@ Successful translations should remain available after reopening the app. Users c
 - [x] (2026-09-17) Inspected client, contracts, storage, tests, and Expo 57 documentation; created codex/device-history-favorites.
 - [x] (2026-09-17) Implemented validated local storage, independent favorites, retention and serialized writes; five storage tests pass.
 - [x] (2026-09-17) Integrated library modal, navigation and star actions; all 22 client tests pass, including reloading, write/read failure and delayed hydration.
-- [ ] Run lint, types, unit tests and build; deploy branch via Coolify MCP and verify with isolated agent-browser.
+- [x] (2026-09-17) Workspace lint, types, all 64 unit tests and production web/API build passed.
+- [x] (2026-09-17) Switched Coolify to the feature branch and started deployment iyukh5elxfv3hfsiqz9u4lla of a9a5dca4282b89893451bb1888f8166f9e73a2ec.
+- [x] (2026-09-17 14:15Z) Deployment finished; Coolify reports running:healthy. Verified desktop/mobile UI, reload persistence, opening with translation API blocked, star removal without history loss, and empty collections in a separate browser session.
 
 ## Surprises & Discoveries
 
@@ -23,7 +25,7 @@ AsyncStorage is already installed for preferences, so no dependency or backend c
 
 ## Outcomes & Retrospective
 
-Implementation is complete. Client tests, lint and workspace type checks pass; full build and deployment verification are in progress. Main stays unchanged until user approval under AGENTS.md.
+Implementation is complete. All 64 workspace unit tests, lint, type checks and the web/API production build pass. Deployment and browser verification are complete. The deployed image also builds the Android APK; native installation was not exercised. Main remains unchanged pending user approval. Main stays unchanged until user approval under AGENTS.md.
 
 ## Context and Orientation
 
@@ -47,7 +49,16 @@ The key thai-translate-library-v1 is additive and does not touch preferences. In
 
 ## Artifacts and Notes
 
-Evidence and deployment commit IDs will be recorded here after verification.
+Storage tests cover malformed data, independent favorites after history eviction, full snapshot roundtrips and ordered writes after failures. Screen tests cover persistence across remount, restoring without another request, changing settings during an in-flight request, failed reads/writes, and adding a result while existing history and favorites are still hydrating.
+
+    pnpm test:unit: contracts 5 passed, API 37 passed, client 22 passed
+    pnpm lint: passed
+    pnpm typecheck: passed
+    pnpm build: passed
+    scripts/classify-deployment-change.sh main a9a5dca: deployment=required apk=rebuild
+    scripts/classify-deployment-change.sh a9a5dca f4430eb: deployment=none apk=none
+
+Coolify deployment iyukh5elxfv3hfsiqz9u4lla builds a9a5dca4282b89893451bb1888f8166f9e73a2ec. The subsequent f4430eb commit changes only tests and README and does not require another build.
 
 ## Interfaces and Dependencies
 
@@ -56,3 +67,13 @@ Use existing AsyncStorage, React, React Native, Ionicons, and contract validator
 Revision 2026-09-17: Initial executable plan after repository inspection.
 
 Revision 2026-09-17: Recorded implementation and initial test results. The shell defaults to Node 26; validation uses PATH=/opt/homebrew/opt/node@24/bin:$PATH to match the project Node 24 requirement.
+
+Revision 2026-09-17: Recorded successful full validation and deployment identifiers while waiting for the Android-containing image build.
+
+## Browser verification evidence
+
+The isolated translate-history-qa browser translated «Спасибо за помощь» through the real deployed API, added it to favorites, reloaded, and reopened it. With **/api/v1/translate blocked through agent-browser, the saved result and pronunciation still opened. Removing its star emptied favorites while history retained the entry; starring from history added it back. A second isolated session, translate-history-isolation, showed empty history and favorites. Visual screenshots at 390×844 and 1280×900 showed the modal and star controls fitting correctly.
+
+Local evidence screenshots: /tmp/translate-history-mobile-stable.png and /tmp/translate-favorites-desktop-final.png. Coolify deployment iyukh5elxfv3hfsiqz9u4lla finished at 2026-09-17T14:12:29Z; application status is running:healthy on codex/device-history-favorites. Production commit is a9a5dca4282b89893451bb1888f8166f9e73a2ec. Later commits only change tests and documentation, so do not redeploy them. On approval, follow AGENTS.md and compare this deployed SHA against the merged main before any deployment decision.
+
+Revision 2026-09-17: Marked the work complete after deployed browser QA. Native device testing was outside this verification run; both platforms share the implemented components and AsyncStorage adapter.
