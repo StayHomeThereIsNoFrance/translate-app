@@ -41,6 +41,34 @@ const result: ModelTranslation = {
 afterEach(() => vi.restoreAllMocks());
 
 describe('translation API', () => {
+  it('reuses disk translations after rebuilding the API instance', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'thai-translate-cache-'));
+    const config = { ...testConfig, translationCachePath: join(directory, 'cache.sqlite') };
+    const translate = vi.fn(async () => result);
+    const payload = {
+      text: 'Спасибо', sourceLanguage: 'ru', targetLanguage: 'th',
+      mode: 'thai-formal', speakerGender: 'male',
+    };
+    try {
+      for (let run = 0; run < 2; run++) {
+        const app = await buildApp({ config, translator: { translate }, logger: false });
+        try {
+          const response = await app.inject({ method: 'POST', url: '/api/v1/translate', payload });
+          expect(response.statusCode).toBe(200);
+          expect(response.json()).toMatchObject({
+            translation: result.translation,
+            pronunciation: { words: result.pronunciationWords },
+          });
+        } finally {
+          await app.close();
+        }
+      }
+      expect(translate).toHaveBeenCalledTimes(1);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it('reports health without contacting the provider', async () => {
     const translate = vi.fn();
     const app = await buildApp({
