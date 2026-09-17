@@ -31,6 +31,28 @@ pnpm build:apk
 
 Architecture and deployment details are in `docs/Architecture.md`.
 
+## Server translation cache
+
+The API stores successful translations in SQLite at `TRANSLATION_CACHE_PATH`
+(default: `./data/translations.sqlite`, relative to the process working directory).
+Repeated requests reuse the entire result, including pronunciation and word
+translations. The key includes trimmed text, source and target languages, mode,
+speaker gender, provider URL, model, reasoning effort, and prompt contents.
+Case, punctuation, and internal whitespace remain significant.
+
+Simultaneous identical requests in one server process share one provider call.
+Errors are not cached; each HTTP response retains its own request ID. Entries
+have no automatic expiry or eviction and survive server restarts. Changes to
+model configuration or prompts select a fresh cache namespace. SQLite uses WAL
+mode; back up the database using a SQLite-aware tool, or stop the server before
+copying its data directory. Disk usage grows with the number of unique requests.
+
+Both Compose files mount a named volume at `/app/data`. For a Coolify Dockerfile
+application, configure persistent storage at `/app/data` before deploying; the
+image uses `/app/data/translations.sqlite`. Persist the whole directory, including
+SQLite's journal files, so container replacement retains translations. Tests use
+isolated temporary databases or the explicit `:memory:` path.
+
 `build:apk` creates `dist/apk/thai-ai-translate.apk`, prints its byte count and
 SHA-256, and targets the production HTTPS API by default. The lower-level
 `build:android` command leaves Gradle's output in the generated native project.
@@ -50,11 +72,27 @@ https://translate.hetz.autismstaking.xyz/apk
 ```
 
 The route returns the Android APK media type and downloads the file as
-`thai-ai-translate.apk`. Deploying a new Git revision through Coolify rebuilds
-and replaces the artifact together with the web/API container. The first cold
-deployment is substantially slower than a web-only build because Gradle must
-compile React Native; Docker caches the pinned Android toolchain and Gradle
-dependencies for later builds.
+`thai-ai-translate.apk`. Docker gives the APK stage a deliberately narrow input
+set: client sources/assets, shared contracts, dependency metadata, and the APK
+build script. API-only deployments reuse the cached APK and do not run Gradle.
+Client or shared-contract changes rebuild and replace it. A cold Android build
+is substantially slower because Gradle must compile React Native; Docker caches
+the pinned Android toolchain, pnpm store, and Gradle dependencies for later
+builds.
+
+Coolify automatic deployments are limited to production inputs by the watch
+paths recorded in `config/deployment/coolify-watch-paths.txt`. Documentation,
+plans, tests, and local tooling do not deploy. Before a manual handoff or merge,
+classify the difference:
+
+```bash
+scripts/classify-deployment-change.sh BASE HEAD
+```
+
+The final line reports whether no deployment is needed, a server deployment can
+reuse the APK, or an APK rebuild is required. If an approved feature revision is
+already running and its tree is identical to the merge commit on `main`, switch
+the Coolify source branch to `main` without deploy, redeploy, or restart.
 
 This is an `arm64-v8a` sideloadable preview signed with the generated preview
 key. It is suitable for the existing Galaxy S22+ workflow, but it is not a

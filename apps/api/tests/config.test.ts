@@ -30,8 +30,10 @@ describe('loadConfig', () => {
       CLIPROXYAPI_API_KEY: key,
       PROMPTS_DIR: './config/prompts',
       STATIC_DIR: './apps/client/dist',
+      TRANSLATION_CACHE_PATH: './data/custom.sqlite',
     });
 
+    expect(config.translationCachePath).toMatch(/data\/custom.sqlite$/);
     expect(config.nodeEnv).toBe('production');
     expect(config.promptsDir).toMatch(/config\/prompts$/);
     expect(config.staticDir).toMatch(/apps\/client\/dist$/);

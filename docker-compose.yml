@@ -13,6 +13,8 @@ services:
       CORS_ORIGINS: http://localhost:8081,http://localhost:3000
     ports:
       - "3000:3000"
+    volumes:
+      - translation-cache:/app/data
     restart: unless-stopped
     networks:
       - default
@@ -22,3 +24,6 @@ networks:
   agent-internal:
     external: true
     name: "${AGENT_DOCKER_NETWORK:-agent-docker_agent-internal}"
+
+volumes:
+  translation-cache:

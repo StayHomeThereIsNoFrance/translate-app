@@ -16,6 +16,7 @@ const EnvironmentSchema = z.object({
   CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:3000'),
   PROMPTS_DIR: z.string().optional(),
   STATIC_DIR: z.string().optional(),
+  TRANSLATION_CACHE_PATH: z.string().min(1).default('./data/translations.sqlite'),
 });
 
 export type AppConfig = {
@@ -30,12 +31,15 @@ export type AppConfig = {
   corsOrigins: string[];
   promptsDir?: string;
   staticDir?: string;
+  translationCachePath: string;
 };
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = EnvironmentSchema.parse(environment);
 
   return {
+    translationCachePath: parsed.TRANSLATION_CACHE_PATH === ':memory:'
+      ? ':memory:' : resolve(parsed.TRANSLATION_CACHE_PATH),
     nodeEnv: parsed.NODE_ENV,
     host: parsed.HOST,
     port: parsed.PORT,

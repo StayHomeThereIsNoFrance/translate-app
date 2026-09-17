@@ -13,6 +13,8 @@ services:
       CORS_ORIGINS: https://translate.hetz.autismstaking.xyz
     expose:
       - "3000"
+    volumes:
+      - translation-cache:/app/data
     restart: unless-stopped
     labels:
       - traefik.enable=true
@@ -33,3 +35,6 @@ services:
 networks:
   coolify:
     external: true
+
+volumes:
+  translation-cache:

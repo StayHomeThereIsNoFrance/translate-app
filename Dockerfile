@@ -1,21 +1,26 @@
-FROM node:24-bookworm AS dependencies
+FROM node:24-bookworm AS pnpm-base
 
 RUN npm install --global pnpm@10.19.0
 WORKDIR /app
+
+FROM pnpm-base AS app-dependencies
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/client/package.json apps/client/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile
 
-FROM dependencies AS app-builder
+FROM app-dependencies AS app-builder
 
-COPY . .
+COPY apps/api apps/api
+COPY apps/client apps/client
+COPY packages/contracts packages/contracts
 RUN pnpm build
 RUN pnpm --filter @thai-translate/api deploy --prod /opt/api
 
-FROM dependencies AS android-toolchain
+FROM pnpm-base AS android-toolchain
 
 ARG ANDROID_COMMAND_LINE_TOOLS_VERSION=15859902
 ARG ANDROID_COMMAND_LINE_TOOLS_SHA256=4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
@@ -50,7 +55,15 @@ FROM android-toolchain AS apk-builder
 ARG EXPO_PUBLIC_API_BASE_URL=https://translate.hetz.autismstaking.xyz
 ENV EXPO_PUBLIC_API_BASE_URL=$EXPO_PUBLIC_API_BASE_URL
 
-COPY . .
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/client/package.json apps/client/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+  pnpm install --frozen-lockfile --filter @thai-translate/client...
+
+COPY apps/client apps/client
+COPY packages/contracts packages/contracts
+COPY scripts/build-apk.sh scripts/build-apk.sh
 RUN --mount=type=cache,target=/root/.gradle \
   APK_OUTPUT_PATH=/tmp/thai-ai-translate.apk ./scripts/build-apk.sh
 
@@ -63,6 +76,7 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV PROMPTS_DIR=/app/config/prompts
 ENV STATIC_DIR=/app/web
+ENV TRANSLATION_CACHE_PATH=/app/data/translations.sqlite
 
 WORKDIR /app
 COPY --from=app-builder /opt/api /app/api
