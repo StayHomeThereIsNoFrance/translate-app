@@ -17,6 +17,7 @@ The observable result is that the public web/API and `https://translate.hetz.aut
 - [x] (2026-09-16 20:31+07:00) Recorded the no-redeploy identical-tree merge procedure, deployment classification, and Coolify watch-path source of truth.
 - [x] (2026-09-16 20:32+07:00) Passed lint, type checking, 37 unit tests, deployment-policy regression tests, production web/API builds, shell syntax, and Docker stage-boundary assertions.
 - [x] (2026-09-16 20:50+07:00) Pushed the branch, saved ordered Coolify watch paths through MCP, deployed commit `77eff665`, and verified the public web page, `/healthz`, and a ranged `/apk` response in an isolated agent-browser session.
+- [x] (2026-09-17 20:45+07:00) Confirmed the feature was already merged into `main` through the server-cache branch, verified `deployment=none apk=none` between deployed commit `d06ad40` and `main`, and confirmed Coolify was already healthy on `main` without another deployment.
 
 ## Surprises & Discoveries
 
@@ -52,8 +53,8 @@ The observable result is that the public web/API and `https://translate.hetz.aut
   Rationale: source, assets, production configuration, Docker inputs, and the APK script must deploy; Markdown, tests, coverage, and local tooling must not. Coolify evaluates watch patterns in order with the last match winning.
   Date/Author: 2026-09-16 / Codex
 
-- Decision: A merge to `main` is a metadata-only handoff only when the deployed feature revision and `main` have identical trees.
-  Rationale: switching the configured branch without redeployment is safe only when it selects exactly the bytes already running. Any tree difference must be classified normally.
+- Decision: A merge to `main` is a metadata-only handoff only when the deployed revision and `main` have equivalent production inputs according to the classifier.
+  Rationale: documentation and tests may differ without changing the production image. Any API, client, contract, prompt, dependency, or Docker difference must be classified normally.
   Date/Author: 2026-09-16 / Codex
 
 ## Outcomes & Retrospective
@@ -64,7 +65,9 @@ The first native image build completed but its container failed healthcheck beca
 
 Public verification used an isolated `agent-browser` session. The production page rendered its translator controls. `/healthz` returned `200` with status `ok`. A same-origin ranged request to `/apk` returned `206`, Android package media type, attachment filename `thai-ai-translate.apk`, `no-store`, exactly 1024 requested bytes, and total artifact size 42,583,825 bytes.
 
-The repository now expresses three outcomes: irrelevant changes do not deploy, server/prompt changes deploy while the APK stage remains independent, and client/shared/dependency/Docker changes rebuild the APK. The exact no-redeploy merge workflow is recorded in `AGENTS.md`. The remaining lifecycle step is user approval followed by merge to `main`; if the classifier reports no production difference from the already deployed revision, that handoff changes only Coolify's branch setting and performs no deploy or restart.
+The repository now expresses three outcomes: irrelevant changes do not deploy, server/prompt changes deploy while the APK stage remains independent, and client/shared/dependency/Docker changes rebuild the APK. The exact no-redeploy merge workflow is recorded in `AGENTS.md`.
+
+After user approval, no new merge commit was needed: `codex/deployment-path-caching` was already an ancestor of `main` through merge commit `d06ad40` on the server-cache branch and final merge commit `ad4ec6e`. Coolify was already configured for `main` and healthy on finished deployment `tmd4dwikz2y1yutwt3cz7vyg`, built from `d06ad40`. The only difference from that deployed revision to current `main` is `apps/api/tests/app.test.ts`; the classifier returned `deployment=none apk=none`, so no deploy, rebuild, or restart was performed.
 
 ## Context and Orientation
 
@@ -127,3 +130,5 @@ Revision note (2026-09-16): Created the plan after repository and production ins
 Revision note (2026-09-16): Recorded and fixed the first native rollout's missing-prompt failure; added a regression assertion that production prompts cannot be excluded from the Docker context.
 
 Revision note (2026-09-16): Recorded the successful production rollout, public endpoint checks, and real documentation-only watch-path suppression.
+
+Revision note (2026-09-17): Closed the lifecycle after confirming the feature was already merged into `main`, production inputs were unchanged from the healthy deployed revision, and no duplicate deployment was necessary.
