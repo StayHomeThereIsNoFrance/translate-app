@@ -31,6 +31,20 @@ pnpm build:apk
 
 Architecture and deployment details are in `docs/Architecture.md`.
 
+## History and favorites
+
+The client automatically keeps the latest 200 successful requests in **История**.
+Use the star on a result or history entry to add it to **Избранное**; press the
+star again to remove it. Favorites remain saved when older history entries expire.
+Open a saved entry to restore its text, languages, mode, speaker gender, result,
+and pronunciation without another translation request.
+
+Collections use AsyncStorage on the current app installation, or storage for the
+current browser profile and site origin on web. They survive reloads and app
+restarts, require no account, and do not sync between devices or between the web
+and Android apps. Clearing app/site data removes them. Storage failures display
+a warning while leaving the current translation available.
+
 ## Server translation cache
 
 The API stores successful translations in SQLite at `TRANSLATION_CACHE_PATH`

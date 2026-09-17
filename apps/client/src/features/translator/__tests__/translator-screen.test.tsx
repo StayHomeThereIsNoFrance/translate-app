@@ -179,6 +179,7 @@ describe('TranslatorScreen', () => {
     fireEvent.changeText(screen.getByTestId('translation-input'), 'Спасибо');
     fireEvent.press(screen.getByTestId('translate-button'));
     expect(await screen.findByText('Сервис временно недоступен')).toBeTruthy();
+    expect(jest.mocked(AsyncStorage.setItem).mock.calls.filter(([key]) => key === LIBRARY_STORAGE_KEY)).toHaveLength(0);
 
     fireEvent.press(screen.getByTestId('retry-button'));
     expect(await screen.findByTestId('translation-output')).toBeTruthy();
@@ -269,9 +270,18 @@ describe('TranslatorScreen', () => {
     fireEvent.press(screen.getByTestId('translate-button'));
     await screen.findByTestId('translation-output');
     expect(jest.mocked(AsyncStorage.setItem).mock.calls.filter(([key]) => key === LIBRARY_STORAGE_KEY)).toHaveLength(0);
-    hydrate(null);
+    const saved = {
+      id: 'previous', createdAt: '2026-09-16T10:00:00Z',
+      request: { text: 'Старый перевод', sourceLanguage: 'ru', targetLanguage: 'th', mode: 'thai-formal', speakerGender: 'female' },
+      result: await (await fetchMock()).json(),
+    };
+    hydrate(JSON.stringify({ history: [saved], favorites: [saved] }));
     fireEvent.press(screen.getByTestId('history-button'));
-    expect(await screen.findByTestId('library-entry-0')).toBeTruthy();
+    expect(await screen.findByTestId('library-entry-1')).toBeTruthy();
+    expect(screen.getByText('Старый перевод')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('library-tab-favorites'));
+    expect(screen.getByTestId('library-entry-0')).toBeTruthy();
+    expect(screen.getByText('Старый перевод')).toBeTruthy();
   });
 
 });
