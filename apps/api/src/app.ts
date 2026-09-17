@@ -15,6 +15,7 @@ import Fastify, {
 } from 'fastify';
 
 import type { AppConfig } from './config.js';
+import { PromptRepository } from './prompts.js';
 import { CachedTranslationService } from './translation-cache.js';
 import {
   TranslationProviderError,
@@ -45,12 +46,19 @@ export async function buildApp({
   translator,
   logger = config.nodeEnv !== 'test',
 }: BuildAppOptions): Promise<FastifyInstance> {
-  const cachedTranslator = new CachedTranslationService(translator);
+  const cachedTranslator = new CachedTranslationService(
+    translator,
+    config.translationCachePath,
+    JSON.stringify(['v1', config.cliproxyBaseUrl, config.model, config.reasoningEffort,
+      new PromptRepository(config.promptsDir).cacheVersion]),
+  );
   const app = Fastify({
     logger,
     bodyLimit: 32 * 1024,
     trustProxy: true,
   });
+
+  app.addHook('onClose', async () => cachedTranslator.close());
 
   await app.register(cors, {
     origin(origin, callback) {

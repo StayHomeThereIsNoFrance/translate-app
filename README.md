@@ -31,6 +31,28 @@ pnpm build:apk
 
 Architecture and deployment details are in `docs/Architecture.md`.
 
+## Server translation cache
+
+The API stores successful translations in SQLite at `TRANSLATION_CACHE_PATH`
+(default: `./data/translations.sqlite`, relative to the process working directory).
+Repeated requests reuse the entire result, including pronunciation and word
+translations. The key includes trimmed text, source and target languages, mode,
+speaker gender, provider URL, model, reasoning effort, and prompt contents.
+Case, punctuation, and internal whitespace remain significant.
+
+Simultaneous identical requests in one server process share one provider call.
+Errors are not cached; each HTTP response retains its own request ID. Entries
+have no automatic expiry or eviction and survive server restarts. Changes to
+model configuration or prompts select a fresh cache namespace. SQLite uses WAL
+mode; back up the database using a SQLite-aware tool, or stop the server before
+copying its data directory. Disk usage grows with the number of unique requests.
+
+Both Compose files mount a named volume at `/app/data`. For a Coolify Dockerfile
+application, configure persistent storage at `/app/data` before deploying; the
+image uses `/app/data/translations.sqlite`. Persist the whole directory, including
+SQLite's journal files, so container replacement retains translations. Tests use
+isolated temporary databases or the explicit `:memory:` path.
+
 `build:apk` creates `dist/apk/thai-ai-translate.apk`, prints its byte count and
 SHA-256, and targets the production HTTPS API by default. The lower-level
 `build:android` command leaves Gradle's output in the generated native project.

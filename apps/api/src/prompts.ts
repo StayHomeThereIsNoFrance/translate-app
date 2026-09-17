@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,6 +66,10 @@ export class PromptRepository {
         },
       ),
     );
+  }
+
+  get cacheVersion(): string {
+    return createHash('sha256').update(JSON.stringify([...this.prompts])).digest('hex');
   }
 
   render(request: TranslationRequest): string {

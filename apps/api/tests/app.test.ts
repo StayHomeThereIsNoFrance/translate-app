@@ -135,6 +135,24 @@ describe('translation API', () => {
     expect(translate).toHaveBeenCalledWith(
       expect.objectContaining({ mode: 'thai-formal', speakerGender: 'male' }),
     );
+    const repeated = await app.inject({
+      method: 'POST',
+      url: '/api/v1/translate',
+      payload: {
+        text: '  Спасибо  ',
+        sourceLanguage: 'ru',
+        targetLanguage: 'th',
+        mode: 'thai-formal',
+        speakerGender: 'male',
+      },
+    });
+    expect(repeated.statusCode).toBe(200);
+    expect(repeated.json()).toEqual({
+      ...response.json(),
+      requestId: expect.any(String),
+    });
+    expect(repeated.json().requestId).not.toBe(response.json().requestId);
+    expect(translate).toHaveBeenCalledTimes(1);
     await app.close();
   });
 

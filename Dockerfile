@@ -63,6 +63,7 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV PROMPTS_DIR=/app/config/prompts
 ENV STATIC_DIR=/app/web
+ENV TRANSLATION_CACHE_PATH=/app/data/translations.sqlite
 
 WORKDIR /app
 COPY --from=app-builder /opt/api /app/api
