@@ -36,6 +36,9 @@ import {
   savePreferences,
 } from './preferences';
 import { SegmentedControl } from './segmented-control';
+import { type TranslationEntry } from './library';
+import { FavoriteButton, TranslationLibraryModal, type LibraryTab } from './translation-library';
+import { useTranslationLibrary } from './use-translation-library';
 
 const languageNames: Record<Language, string> = {
   ru: 'Русский',
@@ -171,6 +174,23 @@ export function TranslatorScreen() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<LibraryTab | null>(null);
+  const [currentEntry, setCurrentEntry] = useState<TranslationEntry | null>(null);
+  const { library, ready: libraryReady, storageError, record, toggle } = useTranslationLibrary();
+  const currentFavorite = library.favorites.some((entry) => entry.id === currentEntry?.id);
+
+  function openEntry(entry: TranslationEntry) {
+    setText(entry.request.text);
+    setSourceLanguage(entry.request.sourceLanguage);
+    setTargetLanguage(entry.request.targetLanguage);
+    setMode(entry.request.mode);
+    setSpeakerGender(entry.request.speakerGender);
+    setResult(entry.result);
+    setCurrentEntry(entry);
+    setCopied(false);
+    setError(null);
+    setLibraryTab(null);
+  }
 
   useEffect(() => {
     let active = true;
@@ -215,14 +235,21 @@ export function TranslatorScreen() {
     setError(null);
     setCopied(false);
     try {
-      const translated = await translate({
+      const request = {
         text: cleaned,
         sourceLanguage,
         targetLanguage,
         mode,
         speakerGender,
-      });
+      };
+      const translated = await translate(request);
+      const entry: TranslationEntry = {
+        id: `${translated.requestId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        createdAt: new Date().toISOString(), request, result: translated,
+      };
       setResult(translated);
+      setCurrentEntry(entry);
+      void record(entry);
     } catch (translationError) {
       setError(
         translationError instanceof Error
@@ -287,6 +314,17 @@ export function TranslatorScreen() {
               onPress={() => setSettingsVisible(true)}
               testID="settings-button"
             />
+          </View>
+
+          <View style={styles.libraryNavigation}>
+            <Pressable accessibilityRole="button" onPress={() => setLibraryTab('history')} style={styles.libraryLink} testID="history-button">
+              <Ionicons name="time-outline" size={19} color="#3c617f" />
+              <Text style={styles.libraryLinkText}>История</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setLibraryTab('favorites')} style={styles.libraryLink} testID="favorites-button">
+              <Ionicons name="star-outline" size={19} color="#3c617f" />
+              <Text style={styles.libraryLinkText}>Избранное</Text>
+            </Pressable>
           </View>
 
           <View style={styles.controlsCard}>
@@ -407,6 +445,8 @@ export function TranslatorScreen() {
                 <Text style={styles.cardEyebrow}>Перевод</Text>
                 {result ? (
                   <View style={styles.resultActions}>
+                    <FavoriteButton selected={currentFavorite} disabled={!libraryReady || !currentEntry}
+                      onPress={() => { if (currentEntry) void toggle(currentEntry); }} testID="favorite-result" />
                     <IconButton
                       icon="volume-high-outline"
                       label="Озвучить тайский текст"
@@ -476,11 +516,15 @@ export function TranslatorScreen() {
             </View>
           ) : null}
 
+          {storageError ? <Text accessibilityRole="alert" style={styles.storageError}>{storageError}</Text> : null}
           <Text style={styles.footer}>
             ИИ может ошибаться — проверяйте важные сообщения перед отправкой.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+      <TranslationLibraryModal library={library} ready={libraryReady} error={storageError} tab={libraryTab}
+        onTabChange={setLibraryTab} onClose={() => setLibraryTab(null)} onOpen={openEntry}
+        onToggle={(entry) => void toggle(entry)} busy={loading} />
       <SettingsModal
         onChangeWordTranslations={setShowWordTranslations}
         onClose={() => setSettingsVisible(false)}
@@ -493,6 +537,10 @@ export function TranslatorScreen() {
 
 /* istanbul ignore next -- appearance is verified by web and Android E2E */
 const styles = StyleSheet.create({
+  libraryNavigation: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  libraryLink: { flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eaf1fa', borderRadius: 12, minHeight: 44 },
+  libraryLinkText: { color: '#3c617f', fontSize: 14, fontWeight: '600' },
+  storageError: { color: '#8c2b24', fontSize: 14, marginTop: 12 },
   flex: { flex: 1 },
   safeArea: {
     backgroundColor: '#f6f8fc',

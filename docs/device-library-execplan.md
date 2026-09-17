@@ -9,8 +9,8 @@ Successful translations should remain available after reopening the app. Users c
 ## Progress
 
 - [x] (2026-09-17) Inspected client, contracts, storage, tests, and Expo 57 documentation; created codex/device-history-favorites.
-- [ ] Implement validated local storage and focused persistence tests.
-- [ ] Integrate library views and star actions with screen tests.
+- [x] (2026-09-17) Implemented validated local storage, independent favorites, retention and serialized writes; five storage tests pass.
+- [x] (2026-09-17) Integrated library modal, navigation and star actions; all 22 client tests pass, including reloading, write/read failure and delayed hydration.
 - [ ] Run lint, types, unit tests and build; deploy branch via Coolify MCP and verify with isolated agent-browser.
 
 ## Surprises & Discoveries
@@ -23,7 +23,7 @@ AsyncStorage is already installed for preferences, so no dependency or backend c
 
 ## Outcomes & Retrospective
 
-Implementation and verification are pending. Main stays unchanged until user approval under AGENTS.md.
+Implementation is complete. Client tests, lint and workspace type checks pass; full build and deployment verification are in progress. Main stays unchanged until user approval under AGENTS.md.
 
 ## Context and Orientation
 
@@ -54,3 +54,5 @@ Evidence and deployment commit IDs will be recorded here after verification.
 Use existing AsyncStorage, React, React Native, Ionicons, and contract validators. TranslationEntry contains id, createdAt, request: TranslationRequest, result: TranslationResult. TranslationLibrary contains history and favorites arrays. library.ts exports loadLibrary, saveLibrary, addToHistory, toggleFavorite; use-translation-library.ts exposes loaded library, readiness, storage error, record, and toggle actions. No new dependencies.
 
 Revision 2026-09-17: Initial executable plan after repository inspection.
+
+Revision 2026-09-17: Recorded implementation and initial test results. The shell defaults to Node 26; validation uses PATH=/opt/homebrew/opt/node@24/bin:$PATH to match the project Node 24 requirement.
