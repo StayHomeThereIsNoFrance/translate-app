@@ -19,7 +19,7 @@ Users can sign in with Google on the website and Android, then see the same hist
 
 ## Surprises & Discoveries
 
-The user authorized creating the Google client through personal Chrome. Created project Thai AI Translate (rich-operand-509111-g7) and Web application OAuth client with redirect URI https://translate.hetz.autismstaking.xyz/api/auth/google/callback. Client credentials and AUTH_PUBLIC_URL/AUTH_DATABASE_PATH are configured runtime-only through Coolify MCP. Confirmed existing persistent /app/data volume. Google branding homepage and privacy URL are saved; audience publication and real login remain to verify. Android already registers the thaitranslate URL scheme.
+The user authorized creating the Google client through personal Chrome. Created project Thai AI Translate (rich-operand-509111-g7) and Web application OAuth client with redirect URI https://translate.hetz.autismstaking.xyz/api/auth/google/callback. Client credentials and AUTH_PUBLIC_URL/AUTH_DATABASE_PATH are configured runtime-only through Coolify MCP. Confirmed existing persistent /app/data volume. Google branding homepage and privacy URL are saved, external audience is published and real web login is verified. Android registers the thaitranslate URL scheme.
 
 A failed local disk write must not poison subsequent synchronization: its state is never applied, and later flushes continue from the last durable state. A test caught and fixed this rejected-promise queue case. Sync requests carry the expected account ID to reject cookie changes made by another browser tab.
 
