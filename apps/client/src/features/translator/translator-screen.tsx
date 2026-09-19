@@ -39,6 +39,8 @@ import { SegmentedControl } from './segmented-control';
 import { type TranslationEntry } from './library';
 import { FavoriteButton, TranslationLibraryModal, type LibraryTab } from './translation-library';
 import { useTranslationLibrary } from './use-translation-library';
+import { useAccount } from '../account/account-context';
+import { AccountPanel } from '../account/account-panel';
 
 const languageNames: Record<Language, string> = {
   ru: 'Русский',
@@ -152,6 +154,7 @@ function PronunciationWords({
 }
 
 export function TranslatorScreen() {
+  const account = useAccount();
   const { width } = useWindowDimensions();
   const desktop = width >= 840;
   const [sourceLanguage, setSourceLanguage] = useState<Language>(
@@ -174,9 +177,10 @@ export function TranslatorScreen() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [accountVisible, setAccountVisible] = useState(false);
   const [libraryTab, setLibraryTab] = useState<LibraryTab | null>(null);
   const [currentEntry, setCurrentEntry] = useState<TranslationEntry | null>(null);
-  const { library, ready: libraryReady, storageError, record, toggle } = useTranslationLibrary();
+  const { library, ready: libraryReady, storageError, record, toggle, pending, syncing, lastSynced, sync } = useTranslationLibrary();
   const currentFavorite = library.favorites.some((entry) => entry.id === currentEntry?.id);
 
   function openEntry(entry: TranslationEntry) {
@@ -228,7 +232,7 @@ export function TranslatorScreen() {
 
   async function runTranslation() {
     const cleaned = text.trim();
-    if (!cleaned || loading) {
+    if (!cleaned || loading || account.loading || (account.user && !libraryReady)) {
       return;
     }
     setLoading(true);
@@ -247,9 +251,9 @@ export function TranslatorScreen() {
         id: `${translated.requestId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         createdAt: new Date().toISOString(), request, result: translated,
       };
+      void record(entry);
       setResult(translated);
       setCurrentEntry(entry);
-      void record(entry);
     } catch (translationError) {
       setError(
         translationError instanceof Error
@@ -315,6 +319,12 @@ export function TranslatorScreen() {
               testID="settings-button"
             />
           </View>
+
+          <Pressable accessibilityRole="button" onPress={() => setAccountVisible(true)} style={styles.accountBar} testID="account-button">
+            <Ionicons name={account.user ? 'cloud-done-outline' : 'person-circle-outline'} size={22} color="#3c617f" />
+            <Text style={styles.accountText}>{account.user ? `${account.user.name} · ${syncing ? 'Синхронизация…' : pending ? `Ожидают отправки: ${pending}` : 'История и избранное в аккаунте'}` : 'Войти через Google · Синхронизация устройств'}</Text>
+            <Ionicons name="chevron-forward" size={17} color="#3c617f" />
+          </Pressable>
 
           <View style={styles.libraryNavigation}>
             <Pressable accessibilityRole="button" onPress={() => setLibraryTab('history')} style={styles.libraryLink} testID="history-button">
@@ -414,7 +424,7 @@ export function TranslatorScreen() {
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  disabled={!text.trim() || loading}
+                  disabled={!text.trim() || loading || account.loading || Boolean(account.user && !libraryReady)}
                   onPress={() => void runTranslation()}
                   style={({ pressed }) => [
                     styles.primaryButton,
@@ -523,6 +533,7 @@ export function TranslatorScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       <TranslationLibraryModal library={library} ready={libraryReady} error={storageError} tab={libraryTab}
+        accountLabel={account.user ? `${account.user.email} · ${syncing ? 'Синхронизация…' : pending ? 'Есть изменения для отправки' : 'Синхронизация между устройствами'}` : undefined}
         onTabChange={setLibraryTab} onClose={() => setLibraryTab(null)} onOpen={openEntry}
         onToggle={(entry) => void toggle(entry)} busy={loading} />
       <SettingsModal
@@ -531,12 +542,16 @@ export function TranslatorScreen() {
         showWordTranslations={showWordTranslations}
         visible={settingsVisible}
       />
+      <AccountPanel visible={accountVisible} onClose={() => setAccountVisible(false)} pending={pending} syncing={syncing}
+        lastSynced={lastSynced} syncError={storageError} onSync={() => void sync()} />
     </SafeAreaView>
   );
 }
 
 /* istanbul ignore next -- appearance is verified by web and Android E2E */
 const styles = StyleSheet.create({
+  accountBar: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12, marginBottom: 12, backgroundColor: '#edf4fb', borderRadius: 12 },
+  accountText: { flex: 1, color: '#3c617f', fontSize: 13, lineHeight: 19 },
   libraryNavigation: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   libraryLink: { flex: 1, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eaf1fa', borderRadius: 12, minHeight: 44 },
   libraryLinkText: { color: '#3c617f', fontSize: 14, fontWeight: '600' },

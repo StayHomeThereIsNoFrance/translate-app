@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAccount } from '../account/account-context';
+import { useAccountLibrary } from '../account/use-account-library';
 
 import {
   addToHistory, emptyLibrary, loadLibrary, saveLibrary, toggleFavorite,
@@ -6,6 +8,8 @@ import {
 } from './library';
 
 export function useTranslationLibrary() {
+  const account = useAccount();
+  const cloud = useAccountLibrary(account.user?.id, account.loading);
   const [library, setLibrary] = useState(emptyLibrary);
   const [ready, setReady] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -44,8 +48,10 @@ export function useTranslationLibrary() {
     }
   }
 
+  if (account.user) return cloud;
   return {
     library, ready, storageError,
+    pending: 0, syncing: false, lastSynced: null, sync: async () => undefined,
     record: (entry: TranslationEntry) => update((value) => addToHistory(value, entry)),
     toggle: (entry: TranslationEntry) => update((value) => toggleFavorite(value, entry)),
   };

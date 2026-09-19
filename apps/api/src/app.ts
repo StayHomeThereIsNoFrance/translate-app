@@ -9,6 +9,7 @@ import {
   type ModelTranslation,
 } from '@thai-translate/contracts';
 import Fastify, {
+  LogController,
   type FastifyInstance,
   type FastifyReply,
   type FastifyRequest,
@@ -58,7 +59,7 @@ export async function buildApp({
   );
   const app = Fastify({
     logger,
-    disableRequestLogging: true,
+    logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 32 * 1024,
     trustProxy: true,
   });
@@ -153,6 +154,7 @@ export async function buildApp({
       root: resolve(config.staticDir),
       prefix: '/',
       decorateReply: true,
+      extensions: ['html'],
     });
     app.get('/apk', async (_request, reply) =>
       reply

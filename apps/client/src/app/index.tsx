@@ -1,5 +1,7 @@
 import { TranslatorScreen } from '@/features/translator/translator-screen';
+import { useAccount } from '@/features/account/account-context';
 
 export default function IndexRoute() {
-  return <TranslatorScreen />;
+  const account = useAccount();
+  return <TranslatorScreen key={account.user?.id ?? 'guest'} />;
 }

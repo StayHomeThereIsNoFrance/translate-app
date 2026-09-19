@@ -6,7 +6,7 @@ import {
 } from '@thai-translate/contracts';
 import { Platform } from 'react-native';
 
-function apiBaseUrl(): string {
+export function apiBaseUrl(): string {
   const configured = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
   if (configured) {
     return configured;

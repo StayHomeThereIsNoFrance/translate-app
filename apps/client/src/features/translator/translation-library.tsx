@@ -19,10 +19,11 @@ export function FavoriteButton({ selected, disabled = false, onPress, testID }: 
   );
 }
 
-export function TranslationLibraryModal({ library, ready, error, tab, onTabChange, onClose, onOpen, onToggle, busy }: {
+export function TranslationLibraryModal({ library, ready, error, tab, onTabChange, onClose, onOpen, onToggle, busy, accountLabel }: {
   library: TranslationLibrary; ready: boolean; error: string | null; tab: LibraryTab | null;
   onTabChange: (tab: LibraryTab) => void; onClose: () => void;
   onOpen: (entry: TranslationEntry) => void; onToggle: (entry: TranslationEntry) => void; busy: boolean;
+  accountLabel?: string;
 }) {
   const entries = tab === 'favorites' ? library.favorites : library.history;
   const favorites = new Set(library.favorites.map((entry) => entry.id));
@@ -39,7 +40,7 @@ export function TranslationLibraryModal({ library, ready, error, tab, onTabChang
           <SegmentedControl label="Сохранённые переводы" options={[
             { id: 'history', label: 'История' }, { id: 'favorites', label: 'Избранное' },
           ]} value={tab ?? 'history'} onChange={onTabChange} testID="library-tab" />
-          <Text style={styles.hint}>Только на этом устройстве. Без синхронизации.</Text>
+          <Text style={styles.hint}>{accountLabel ?? 'Только на этом устройстве. Войдите через Google для синхронизации.'}</Text>
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
           {!ready && !error ? <ActivityIndicator accessibilityLabel="Загрузка сохранённых переводов" /> : null}
           {ready ? <FlatList

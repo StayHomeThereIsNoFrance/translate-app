@@ -41,9 +41,33 @@ and pronunciation without another translation request.
 
 Collections use AsyncStorage on the current app installation, or storage for the
 current browser profile and site origin on web. They survive reloads and app
-restarts, require no account, and do not sync between devices or between the web
-and Android apps. Clearing app/site data removes them. Storage failures display
-a warning while leaving the current translation available.
+restarts and require no account. In guest mode they stay on that device. Clearing
+app/site data removes local data. Storage failures display a warning.
+
+Sign in through Google in the account panel to synchronize history and favorites
+between web and Android. Existing guest entries are copied into the account once
+per device. Account caches and offline queues are separate from guest data and
+from other accounts. Changes retry on focus, every 30 seconds, and on manual sync.
+Logout returns to the guest collection; queued account changes remain available
+when that same account signs in again. Conflicting star changes use the last
+operation received by the server.
+
+## Google sign-in setup
+
+Create a Google OAuth **Web application** client with redirect URI
+`https://translate.hetz.autismstaking.xyz/api/auth/google/callback`. Both web and
+Android use this server callback; Android then returns via `thaitranslate://auth/callback`.
+Configure runtime-only `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
+`AUTH_PUBLIC_URL` (the HTTPS site origin). Never put the secret in Expo public
+variables. Set `AUTH_DATABASE_PATH=/app/data/accounts.sqlite` on production and
+persist `/app/data`, including SQLite journals. Back up this database with the
+same SQLite-aware procedure as the translation cache.
+
+Google consent uses only `openid email profile`. Configure the public homepage
+and `/privacy` URL in Google Auth Platform and publish the external audience.
+Without Google credentials, translation and device-only collections still work.
+Web sessions use an HttpOnly Secure cookie; Android sessions use SecureStore.
+Sessions expire after 30 days and logout revokes the current session.
 
 ## Server translation cache
 

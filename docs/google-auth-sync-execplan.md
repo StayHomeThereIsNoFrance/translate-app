@@ -9,14 +9,16 @@ Users can sign in with Google on the website and Android, then see the same hist
 ## Progress
 
 - [x] (2026-09-19) Inspected existing device library, API, deployment settings and Expo 57/Google documentation. Created codex/google-auth-sync from the deployed history feature.
-- [ ] Implement persistent account/authentication and synchronized library API with security tests.
-- [ ] Implement web/Android login, account-local cache, durable change queue, merge and UI.
+- [x] (2026-09-19) Implement persistent account/authentication and synchronized library API with security tests.
+- [x] (2026-09-19) Implement web/Android login, account-local cache, durable change queue, merge and UI. Unit suites pass (43 API, 37 client), lint and typecheck pass.
 - [ ] Run tests, lint, types and builds; deploy through Coolify MCP and verify with isolated agent-browser.
 - [ ] Configure real Google client and verify real sign-in on web and Android where credentials/device access permit.
 
 ## Surprises & Discoveries
 
-Coolify currently has no Google OAuth environment variables. The user has been asked to configure a Web application OAuth client with redirect URI https://translate.hetz.autismstaking.xyz/api/auth/google/callback. This is an external prerequisite for real Google login, not for implementation and deterministic tests. The backend already uses SQLite and a persistent /app/data volume. Android already registers the thaitranslate URL scheme.
+The user authorized creating the Google client through personal Chrome. Created project Thai AI Translate (rich-operand-509111-g7) and Web application OAuth client with redirect URI https://translate.hetz.autismstaking.xyz/api/auth/google/callback. Client credentials and AUTH_PUBLIC_URL/AUTH_DATABASE_PATH are configured runtime-only through Coolify MCP. Confirmed existing persistent /app/data volume. Google branding homepage and privacy URL are saved; audience publication and real login remain to verify. Android already registers the thaitranslate URL scheme.
+
+A failed local disk write must not poison subsequent synchronization: its state is never applied, and later flushes continue from the last durable state. A test caught and fixed this rejected-promise queue case. Sync requests carry the expected account ID to reject cookie changes made by another browser tab.
 
 ## Decision Log
 
@@ -26,7 +28,7 @@ Coolify currently has no Google OAuth environment variables. The user has been a
 
 ## Outcomes & Retrospective
 
-Pending implementation. Main will not be merged without approval. Missing Google credentials will be reported explicitly if still unavailable at delivery; mock-provider tests cannot substitute for real Google verification.
+Backend and client implementation complete; deployment and real Google verification remain. Main will not be merged without approval. Mock-provider tests cannot substitute for real Google verification.
 
 ## Context and Orientation
 
@@ -63,3 +65,5 @@ Record tests, deployment SHA, screenshots and external blockers here as work pro
 Shared TranslationEntry contains id, createdAt, request and result. LibraryOperation is an identified record/import/favorite change. POST /api/auth/start creates a Google authorization URL for a client challenge; GET /api/auth/google/callback verifies Google and redirects with a short-lived code; POST /api/auth/exchange exchanges the code and verifier for our session. GET /api/auth/session reports user and configuration availability. POST /api/auth/logout revokes the session. POST /api/v1/library/sync applies bounded operations transactionally and returns history/favorites. Use jose for Google signature verification, Expo WebBrowser for external login, Expo Crypto for challenges, Expo SecureStore for native session tokens, and existing AsyncStorage for non-secret account caches.
 
 Revision 2026-09-19: Initial plan, including external Google credential prerequisite and account-isolation/offline semantics.
+
+Revision 2026-09-19: Recorded completed implementation, passing unit checks, user-authorized Google setup and recovery from local storage failures. Personal Chrome is authorized specifically for Google setup and real sign-in; other UI QA stays isolated.

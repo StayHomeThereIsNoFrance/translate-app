@@ -2,7 +2,7 @@
   "expo": {
     "name": "Thai AI Translate",
     "slug": "thai-ai-translate",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/thai-translate-icon.png",
     "scheme": "thaitranslate",
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "xyz.autismstaking.thaitranslate",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#1A73E8",
         "foregroundImage": "./assets/images/thai-translate-foreground.png",

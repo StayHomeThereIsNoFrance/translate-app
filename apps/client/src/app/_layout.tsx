@@ -1,6 +1,7 @@
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { AccountProvider } from '../features/account/account-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -10,10 +11,10 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={DefaultTheme}>
+    <AccountProvider><ThemeProvider value={DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
       </Stack>
-    </ThemeProvider>
+    </ThemeProvider></AccountProvider>
   );
 }
