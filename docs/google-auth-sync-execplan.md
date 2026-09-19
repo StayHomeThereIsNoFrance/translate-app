@@ -11,8 +11,10 @@ Users can sign in with Google on the website and Android, then see the same hist
 - [x] (2026-09-19) Inspected existing device library, API, deployment settings and Expo 57/Google documentation. Created codex/google-auth-sync from the deployed history feature.
 - [x] (2026-09-19) Implement persistent account/authentication and synchronized library API with security tests.
 - [x] (2026-09-19) Implement web/Android login, account-local cache, durable change queue, merge and UI. Unit suites pass (43 API, 37 client), lint and typecheck pass.
-- [ ] Run tests, lint, types and builds; deploy through Coolify MCP and verify with isolated agent-browser.
-- [ ] Configure real Google client and verify real sign-in on web and Android where credentials/device access permit.
+- [x] (2026-09-19) Run tests (85 passed), lint, types, production web/API builds and deployment-policy checks.
+- [ ] Deploy through Coolify MCP and verify with isolated agent-browser. Deployment ycc0ctksubmyrnngfp7evxez builds b715e402705633ca3dcaacd8247ff214378c81f3.
+- [x] (2026-09-19) Configure Google client, runtime secrets, branding, public privacy URL and publish external audience (Google confirms In production).
+- [ ] Verify real sign-in on web and Android where device access permits. ADB currently reports no connected phone; user was notified.
 
 ## Surprises & Discoveries
 
@@ -58,7 +60,7 @@ SQLite schema changes are additive with CREATE TABLE IF NOT EXISTS. Session and 
 
 ## Artifacts and Notes
 
-Record tests, deployment SHA, screenshots and external blockers here as work progresses.
+Tests: contracts 5, API 43, client 37; all pass. API statement coverage 94.26%, client 94.55%; lint/typecheck/build and deployment-policy checks pass. Production classification from deployed a9a5dca to b715e40 returns deployment=required apk=rebuild. Coolify branch is codex/google-auth-sync. APK version is 1.2.0, Android versionCode 3.
 
 ## Interfaces and Dependencies
 
