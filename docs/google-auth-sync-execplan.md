@@ -15,7 +15,8 @@ Users can sign in with Google on the website and Android, then see the same hist
 - [x] (2026-09-19) Deploy through Coolify MCP and verify with isolated agent-browser. Deployment zyl1hznsplgvg67hmy9ftcda finished with healthy container at 11:58 UTC, commit 37fb1055fb5819d6f1e0d504761f7f034fff0fd7.
 - [x] (2026-09-19) Configure Google client, runtime secrets, branding, public privacy URL and publish external audience (Google confirms In production).
 - [x] (2026-09-19) Verify real Google sign-in on web, guest import, session persistence after reload, server-backed favorite additions/removals, public privacy page, guest persistence and desktop/mobile layout.
-- [x] (2026-09-19) Verify downloadable APK 1.2.0/versionCode 3 and registered thaitranslate callback scheme. Real Android-device sign-in remains unverified: ADB reports no connected phone and user was notified. Native flow and two-client synchronization passed automated tests; these are not claimed as a real-device run.
+- [x] (2026-09-19) Verify downloadable APK 1.2.0/versionCode 3 and registered thaitranslate callback scheme. Physical-device verification was initially unavailable.
+- [x] (2026-09-20) Updated the connected Galaxy S22+ (SM-S906E) from 1.1.0 to 1.2.0 without clearing app data. Verified real Google login, browser-to-app callback, shared history/favorites, native translation, two-way star synchronization and session persistence after force-stop/relaunch. Physical Maestro smoke assertions all passed.
 
 ## Surprises & Discoveries
 
@@ -33,7 +34,7 @@ The first production build ycc0ctksubmyrnngfp7evxez failed downloading Maven dep
 
 ## Outcomes & Retrospective
 
-Backend and client implementation are deployed, Google external audience is in production and real web sign-in is verified. Local guest history/favorites imported into the account, a new translation synced, its star survived reload and removal reached the server. Isolated browser guest data remained separate. Android APK builds and its callback scheme is present, but no phone was available for real native login. Main remains unmerged pending user approval.
+Backend and client implementation are deployed, Google external audience is in production and real web and Android sign-in are verified. Local guest history/favorites imported into the account, a new translation synced, its star survived reload and removal reached the server. Isolated browser guest data remained separate. The published APK is installed on the user's Galaxy S22+; the app retains its Google session through force-stop/relaunch. Phone-created history and favorite changes appeared on web; removing the test favorite on web removed it on the phone. Main remains unmerged pending user approval.
 
 ## Context and Orientation
 
@@ -76,3 +77,5 @@ Revision 2026-09-19: Initial plan, including external Google credential prerequi
 Revision 2026-09-19: Recorded completed implementation, passing unit checks, user-authorized Google setup and recovery from local storage failures. Personal Chrome is authorized specifically for Google setup and real sign-in; other UI QA stays isolated.
 
 Revision 2026-09-19: Recorded successful production retry, real Google/browser acceptance, APK verification and the explicit physical-device verification limitation.
+
+Revision 2026-09-20: Closed the physical-device verification gap after the user connected the Galaxy S22+. Installed the previously verified production APK using adb install -r (no uninstall or clear-data). Real Google authentication returned successfully to the native app. Existing web records appeared in the native library. A new native Спасибо translation produced ขอบคุณครับ with populated Latin/Russian pronunciation and synced to web; a native star appeared in the web favorites UI and its web removal propagated back to native. A cold application restart retained the signed-in account and updated collection. Maestro using Android Studio's bundled JDK passed all five assertions plus screenshot capture in /tmp/translate-native-smoke.yaml. Evidence screenshots are /tmp/translate-native-live.png and /tmp/translate-native-result.png. The phone itself was not rebooted, and offline-device behavior was not re-tested physically. No production code or Coolify changes were needed for this verification.
