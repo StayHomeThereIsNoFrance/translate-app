@@ -91,3 +91,38 @@ export const SPEAKER_GENDERS: ReadonlyArray<{
   { id: 'male', label: 'Мужчина' },
   { id: 'female', label: 'Женщина' },
 ] as const;
+
+// Shared account library protocol. Operation IDs make offline retries idempotent.
+export const TranslationEntrySchema = z.object({
+  id: z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/),
+  createdAt: z.iso.datetime(),
+  request: TranslationRequestSchema,
+  result: TranslationResultSchema,
+}).refine((entry) => JSON.stringify(entry).length <= 64000, 'Translation is too large to sync');
+export type TranslationEntry = z.infer<typeof TranslationEntrySchema>;
+
+export const TranslationLibrarySchema = z.object({
+  history: z.array(TranslationEntrySchema).max(200),
+  favorites: z.array(TranslationEntrySchema),
+});
+export type TranslationLibrary = z.infer<typeof TranslationLibrarySchema>;
+
+export const LibraryOperationSchema = z.object({
+  id: z.string().uuid(),
+  kind: z.enum(['record', 'favorite', 'import']),
+  entry: TranslationEntrySchema,
+  favorite: z.boolean().default(false),
+  inHistory: z.boolean().default(true),
+});
+export type LibraryOperation = z.infer<typeof LibraryOperationSchema>;
+export const LibrarySyncRequestSchema = z.object({ userId: z.string().min(1).max(255), operations: z.array(LibraryOperationSchema).max(50) });
+export const AccountUserSchema = z.object({
+  id: z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/),
+  name: z.string().max(200),
+  email: z.string().email(),
+});
+export type AccountUser = z.infer<typeof AccountUserSchema>;
+export const AccountSessionSchema = z.object({
+  user: AccountUserSchema.nullable(),
+  available: z.boolean(),
+});

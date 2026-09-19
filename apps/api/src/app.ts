@@ -15,6 +15,8 @@ import Fastify, {
 } from 'fastify';
 
 import type { AppConfig } from './config.js';
+import { registerAccountRoutes } from './account-routes.js';
+import type { GoogleIdentity } from './google-auth.js';
 import { PromptRepository } from './prompts.js';
 import { CachedTranslationService } from './translation-cache.js';
 import {
@@ -26,6 +28,7 @@ type BuildAppOptions = {
   config: AppConfig;
   translator: TranslationService;
   logger?: boolean;
+  identity?: GoogleIdentity;
 };
 
 function apiError(
@@ -44,6 +47,7 @@ function apiError(
 export async function buildApp({
   config,
   translator,
+  identity,
   logger = config.nodeEnv !== 'test',
 }: BuildAppOptions): Promise<FastifyInstance> {
   const cachedTranslator = new CachedTranslationService(
@@ -54,6 +58,7 @@ export async function buildApp({
   );
   const app = Fastify({
     logger,
+    disableRequestLogging: true,
     bodyLimit: 32 * 1024,
     trustProxy: true,
   });
@@ -61,6 +66,7 @@ export async function buildApp({
   app.addHook('onClose', async () => cachedTranslator.close());
 
   await app.register(cors, {
+    credentials: true,
     origin(origin, callback) {
       if (!origin || config.corsOrigins.includes(origin)) {
         callback(null, true);
@@ -73,6 +79,8 @@ export async function buildApp({
     global: false,
     keyGenerator: (request) => request.ip,
   });
+
+  await registerAccountRoutes(app, config, identity);
 
   app.get('/healthz', async () => ({
     status: 'ok',

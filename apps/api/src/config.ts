@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import { z } from 'zod';
 
@@ -16,6 +16,10 @@ const EnvironmentSchema = z.object({
   CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:3000'),
   PROMPTS_DIR: z.string().optional(),
   STATIC_DIR: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  AUTH_PUBLIC_URL: z.url().default('https://translate.hetz.autismstaking.xyz'),
+  AUTH_DATABASE_PATH: z.string().min(1).optional(),
   TRANSLATION_CACHE_PATH: z.string().min(1).default('./data/translations.sqlite'),
 });
 
@@ -32,12 +36,26 @@ export type AppConfig = {
   promptsDir?: string;
   staticDir?: string;
   translationCachePath: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  authPublicUrl?: string;
+  authDatabasePath?: string;
 };
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = EnvironmentSchema.parse(environment);
 
+  const authUrl = new URL(parsed.AUTH_PUBLIC_URL);
+  if (authUrl.username || authUrl.password || authUrl.pathname !== '/' || authUrl.search || authUrl.hash ||
+      (authUrl.protocol !== 'https:' && !(parsed.NODE_ENV !== 'production' && authUrl.protocol === 'http:'))) {
+    throw new Error('AUTH_PUBLIC_URL must be an HTTPS origin');
+  }
+
   return {
+    googleClientId: parsed.GOOGLE_CLIENT_ID,
+    googleClientSecret: parsed.GOOGLE_CLIENT_SECRET,
+    authPublicUrl: authUrl.origin,
+    authDatabasePath: parsed.AUTH_DATABASE_PATH === ':memory:' ? ':memory:' : resolve(parsed.AUTH_DATABASE_PATH ?? resolve(dirname(parsed.TRANSLATION_CACHE_PATH), 'accounts.sqlite')),
     translationCachePath: parsed.TRANSLATION_CACHE_PATH === ':memory:'
       ? ':memory:' : resolve(parsed.TRANSLATION_CACHE_PATH),
     nodeEnv: parsed.NODE_ENV,
