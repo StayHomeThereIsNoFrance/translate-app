@@ -12,15 +12,18 @@ Users can sign in with Google on the website and Android, then see the same hist
 - [x] (2026-09-19) Implement persistent account/authentication and synchronized library API with security tests.
 - [x] (2026-09-19) Implement web/Android login, account-local cache, durable change queue, merge and UI. Unit suites pass (43 API, 37 client), lint and typecheck pass.
 - [x] (2026-09-19) Run tests (85 passed), lint, types, production web/API builds and deployment-policy checks.
-- [ ] Deploy through Coolify MCP and verify with isolated agent-browser. Deployment ycc0ctksubmyrnngfp7evxez builds b715e402705633ca3dcaacd8247ff214378c81f3.
+- [x] (2026-09-19) Deploy through Coolify MCP and verify with isolated agent-browser. Deployment zyl1hznsplgvg67hmy9ftcda finished with healthy container at 11:58 UTC, commit 37fb1055fb5819d6f1e0d504761f7f034fff0fd7.
 - [x] (2026-09-19) Configure Google client, runtime secrets, branding, public privacy URL and publish external audience (Google confirms In production).
-- [ ] Verify real sign-in on web and Android where device access permits. ADB currently reports no connected phone; user was notified.
+- [x] (2026-09-19) Verify real Google sign-in on web, guest import, session persistence after reload, server-backed favorite additions/removals, public privacy page, guest persistence and desktop/mobile layout.
+- [x] (2026-09-19) Verify downloadable APK 1.2.0/versionCode 3 and registered thaitranslate callback scheme. Real Android-device sign-in remains unverified: ADB reports no connected phone and user was notified. Native flow and two-client synchronization passed automated tests; these are not claimed as a real-device run.
 
 ## Surprises & Discoveries
 
 The user authorized creating the Google client through personal Chrome. Created project Thai AI Translate (rich-operand-509111-g7) and Web application OAuth client with redirect URI https://translate.hetz.autismstaking.xyz/api/auth/google/callback. Client credentials and AUTH_PUBLIC_URL/AUTH_DATABASE_PATH are configured runtime-only through Coolify MCP. Confirmed existing persistent /app/data volume. Google branding homepage and privacy URL are saved; audience publication and real login remain to verify. Android already registers the thaitranslate URL scheme.
 
 A failed local disk write must not poison subsequent synchronization: its state is never applied, and later flushes continue from the last durable state. A test caught and fixed this rejected-promise queue case. Sync requests carry the expected account ID to reject cookie changes made by another browser tab.
+
+The first production build ycc0ctksubmyrnngfp7evxez failed downloading Maven dependencies (Read timed out). Retrying through Coolify MCP succeeded with the same production inputs; no dependency or code workaround was necessary. The old container continued serving throughout the failed build.
 
 ## Decision Log
 
@@ -30,7 +33,7 @@ A failed local disk write must not poison subsequent synchronization: its state 
 
 ## Outcomes & Retrospective
 
-Backend and client implementation complete; deployment and real Google verification remain. Main will not be merged without approval. Mock-provider tests cannot substitute for real Google verification.
+Backend and client implementation are deployed, Google external audience is in production and real web sign-in is verified. Local guest history/favorites imported into the account, a new translation synced, its star survived reload and removal reached the server. Isolated browser guest data remained separate. Android APK builds and its callback scheme is present, but no phone was available for real native login. Main remains unmerged pending user approval.
 
 ## Context and Orientation
 
@@ -62,6 +65,8 @@ SQLite schema changes are additive with CREATE TABLE IF NOT EXISTS. Session and 
 
 Tests: contracts 5, API 43, client 37; all pass. API statement coverage 94.26%, client 94.55%; lint/typecheck/build and deployment-policy checks pass. Production classification from deployed a9a5dca to b715e40 returns deployment=required apk=rebuild. Coolify branch is codex/google-auth-sync. APK version is 1.2.0, Android versionCode 3.
 
+Live artifacts: https://translate.hetz.autismstaking.xyz, /privacy and /apk. Downloaded APK is 42,905,148 bytes, SHA-256 ff8c92a09844267ecc2f3fe6fac05665af113a18863600942d42a2dd6fddf35e. Inspected isolated screenshots at 390×844 and 1440×1000; no horizontal overflow. Auth session and sync endpoints returned successful results after real Google consent. Temporary screenshots: /tmp/translate-account-mobile.png and /tmp/translate-guest-desktop.png. Documentation-only follow-ups do not require deployment.
+
 ## Interfaces and Dependencies
 
 Shared TranslationEntry contains id, createdAt, request and result. LibraryOperation is an identified record/import/favorite change. POST /api/auth/start creates a Google authorization URL for a client challenge; GET /api/auth/google/callback verifies Google and redirects with a short-lived code; POST /api/auth/exchange exchanges the code and verifier for our session. GET /api/auth/session reports user and configuration availability. POST /api/auth/logout revokes the session. POST /api/v1/library/sync applies bounded operations transactionally and returns history/favorites. Use jose for Google signature verification, Expo WebBrowser for external login, Expo Crypto for challenges, Expo SecureStore for native session tokens, and existing AsyncStorage for non-secret account caches.
@@ -69,3 +74,5 @@ Shared TranslationEntry contains id, createdAt, request and result. LibraryOpera
 Revision 2026-09-19: Initial plan, including external Google credential prerequisite and account-isolation/offline semantics.
 
 Revision 2026-09-19: Recorded completed implementation, passing unit checks, user-authorized Google setup and recovery from local storage failures. Personal Chrome is authorized specifically for Google setup and real sign-in; other UI QA stays isolated.
+
+Revision 2026-09-19: Recorded successful production retry, real Google/browser acceptance, APK verification and the explicit physical-device verification limitation.
